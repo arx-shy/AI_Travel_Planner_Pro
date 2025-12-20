@@ -19,6 +19,13 @@
           <button class="flex items-center gap-2 rounded-full border-2 border-slate-200 px-8 py-4 font-bold text-slate-600 transition-all hover:border-teal-500 hover:text-teal-500">
             <i class="fas fa-play-circle text-xl"></i> 观看演示
           </button>
+          <button
+            type="button"
+            class="flex items-center gap-2 rounded-full border-2 border-slate-200 px-6 py-4 font-bold text-slate-600 transition-all hover:border-teal-500 hover:text-teal-500"
+            @click="handleGuestLogin"
+          >
+            <i class="fas fa-user-check text-xl"></i> 游客体验
+          </button>
         </div>
 
         <div class="mt-10 flex items-center gap-4">
@@ -71,7 +78,22 @@
 </template>
 
 <script setup lang="ts">
-// Hero section for the landing page.
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleGuestLogin = async () => {
+  const result = await authStore.login({
+    email: 'guest@wanderflow.app',
+    password: 'guest'
+  })
+
+  if (result.success) {
+    router.push('/planner')
+  }
+}
 </script>
 
 <style scoped>

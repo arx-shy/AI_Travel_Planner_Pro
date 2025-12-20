@@ -41,6 +41,14 @@
         >
           立即注册
         </button>
+
+        <button
+          type="button"
+          @click="handleGuestLogin"
+          class="w-full border border-slate-200 text-slate-600 font-semibold py-3 rounded-lg hover:border-teal-400 hover:text-teal-600 transition-all"
+        >
+          游客登录（免输入）
+        </button>
       </form>
 
       <div class="mt-8 text-center">
@@ -56,8 +64,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const email = ref('')
 const name = ref('')
 const password = ref('')
@@ -65,5 +75,16 @@ const password = ref('')
 const handleRegister = () => {
   // Handle register logic
   router.push('/planner')
+}
+
+const handleGuestLogin = async () => {
+  const result = await authStore.login({
+    email: 'guest@wanderflow.app',
+    password: 'guest'
+  })
+
+  if (result.success) {
+    router.push('/planner')
+  }
 }
 </script>

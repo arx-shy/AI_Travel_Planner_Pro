@@ -1,49 +1,32 @@
 <template>
   <div class="h-screen flex bg-[#F8FAFC]">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-slate-100 flex flex-col shadow-sm flex-shrink-0">
-      <div class="p-6 flex items-center gap-2 text-teal-500">
-        <i class="fas fa-paper-plane text-2xl"></i>
-        <span class="font-bold text-xl text-slate-800">WanderFlow</span>
-      </div>
-      <nav class="flex-1 mt-4">
-        <router-link to="/planner" class="nav-item">
-          <i class="fas fa-map w-6"></i> 规划行程
-        </router-link>
-        <router-link to="/qa" class="nav-item active">
-          <i class="fas fa-comment-dots w-6"></i> AI 助手
-        </router-link>
-        <router-link to="/copywriter" class="nav-item">
-          <i class="fas fa-pen-nib w-6"></i> 文案生成
-        </router-link>
-        <router-link to="/settings" class="nav-item">
-          <i class="fas fa-cog w-6"></i> 账户设置
-        </router-link>
-      </nav>
-      <div class="p-4 border-t border-slate-100">
-        <div class="bg-teal-50 rounded-xl p-4">
-          <h4 class="text-sm font-bold text-teal-800 mb-1">对话模式</h4>
-          <div class="space-y-2 text-xs">
-            <div class="flex items-center gap-2 text-slate-600">
-              <i class="fas fa-circle text-[8px] text-green-500"></i>
-              <span>智能对话</span>
-            </div>
-            <div class="flex items-center gap-2 text-slate-600">
-              <i class="fas fa-circle text-[8px] text-blue-500"></i>
-              <span>知识库问答</span>
-            </div>
-            <div class="flex items-center gap-2 text-slate-600">
-              <i class="fas fa-circle text-[8px] text-yellow-500"></i>
-              <span>天气查询</span>
-            </div>
-            <div class="flex items-center gap-2 text-slate-600">
-              <i class="fas fa-circle text-[8px] text-purple-500"></i>
-              <span>语音对话</span>
+    <AppSidebar active="qa">
+      <template #afterNav>
+        <div class="p-4 border-t border-slate-100">
+          <div class="bg-teal-50 rounded-xl p-4">
+            <h4 class="text-sm font-bold text-teal-800 mb-1">对话模式</h4>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-circle text-[8px] text-green-500"></i>
+                <span>智能对话</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-circle text-[8px] text-blue-500"></i>
+                <span>知识库问答</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-circle text-[8px] text-yellow-500"></i>
+                <span>天气查询</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-circle text-[8px] text-purple-500"></i>
+                <span>语音对话</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </template>
+    </AppSidebar>
 
     <ChatContainer>
       <template #header>
@@ -144,6 +127,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import AppSidebar from '@/components/common/AppSidebar.vue'
 import ChatContainer from '@/components/chat/ChatContainer.vue'
 import FeatureToggle from '@/components/chat/FeatureToggle.vue'
 import MessageList from '@/components/chat/MessageList.vue'

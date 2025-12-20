@@ -1,6 +1,18 @@
 <template>
   <div class="bg-[#F8FAFC] h-screen flex overflow-hidden">
-    <PlannerSidebar />
+    <AppSidebar active="planner">
+      <template #footer>
+        <div class="p-4 border-t border-slate-100">
+          <div class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+            <img src="https://i.pravatar.cc/100?img=12" class="w-10 h-10 rounded-full" alt="用户头像">
+            <div>
+              <div class="text-sm font-bold text-slate-700">Alex Chen</div>
+              <div class="text-xs text-slate-400">Pro 用户</div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </AppSidebar>
 
     <main class="flex-1 flex flex-col relative overflow-hidden">
       <PlannerHeader />
@@ -39,9 +51,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import AppSidebar from '@/components/common/AppSidebar.vue'
 import ItineraryForm from '@/components/planner/ItineraryForm.vue'
 import ItineraryCard from '@/components/planner/ItineraryCard.vue'
-import PlannerSidebar from '@/components/planner/PlannerSidebar.vue'
 import MapPreview from '@/components/planner/MapPreview.vue'
 import PlannerHeader from '@/components/planner/PlannerHeader.vue'
 import InspirationCard from '@/components/planner/InspirationCard.vue'

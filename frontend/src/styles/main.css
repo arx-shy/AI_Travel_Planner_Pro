@@ -133,17 +133,43 @@
     transition: all 0.3s ease;
     text-decoration: none;
     font-weight: 500;
+    position: relative;
+    overflow: hidden;
   }
 
   .nav-item:hover {
     background: #f1f5f9;
     color: var(--color-primary);
+    transform: translateX(2px);
   }
 
   .nav-item.active {
     background: var(--gradient-main);
     color: #fff;
     box-shadow: var(--shadow-sm);
+  }
+
+  .nav-item::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 6px;
+    height: 2px;
+    background: var(--gradient-main);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s var(--ease-smooth);
+    opacity: 0.6;
+  }
+
+  .nav-item:hover::after {
+    transform: scaleX(1);
+  }
+
+  .nav-item.active::after {
+    transform: scaleX(1);
+    opacity: 1;
   }
 }
 
