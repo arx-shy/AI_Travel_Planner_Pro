@@ -127,6 +127,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import ChatContainer from '@/components/chat/ChatContainer.vue'
 import FeatureToggle from '@/components/chat/FeatureToggle.vue'
@@ -135,12 +136,7 @@ import InputBox from '@/components/chat/InputBox.vue'
 import QuickQuestions from '@/components/chat/QuickQuestions.vue'
 import WeatherPanel from '@/components/chat/WeatherPanel.vue'
 import VoicePanel from '@/components/chat/VoicePanel.vue'
-
-interface ChatMessage {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-}
+import { useQaStore } from '@/stores/qa'
 
 interface WeatherItem {
   date: string
@@ -152,13 +148,8 @@ interface WeatherItem {
   wind: number
 }
 
-const messages = ref<ChatMessage[]>([
-  {
-    id: 1,
-    role: 'assistant',
-    content: '您好！我是WanderBot，您的AI旅行助理。我可以帮您查询天气、推荐景点、制定行程等。'
-  }
-])
+const qaStore = useQaStore()
+const { messages } = storeToRefs(qaStore)
 
 const inputMessage = ref('')
 const knowledgeEnabled = ref(false)
@@ -193,30 +184,16 @@ const toggleFeature = (feature: 'knowledge' | 'weather' | 'voice') => {
   if (feature === 'voice') voiceEnabled.value = !voiceEnabled.value
 }
 
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!inputMessage.value.trim()) return
-
-  messages.value.push({
-    id: messages.value.length + 1,
-    role: 'user',
-    content: inputMessage.value
-  })
-
-  const userMessage = inputMessage.value
+  const message = inputMessage.value
   inputMessage.value = ''
-
-  setTimeout(() => {
-    messages.value.push({
-      id: messages.value.length + 1,
-      role: 'assistant',
-      content: `我理解您的问题是："${userMessage}"。我会为您提供详细的旅行建议。`
-    })
-  }, 800)
+  await qaStore.sendMessage(message)
 }
 
 const handleQuickQuestion = (question: string) => {
   inputMessage.value = question
-  sendMessage()
+  void sendMessage()
 }
 
 const queryWeather = () => {

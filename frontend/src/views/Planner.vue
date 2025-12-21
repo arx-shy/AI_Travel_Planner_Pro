@@ -50,7 +50,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import ItineraryForm from '@/components/planner/ItineraryForm.vue'
 import ItineraryCard from '@/components/planner/ItineraryCard.vue'
@@ -58,19 +59,14 @@ import MapPreview from '@/components/planner/MapPreview.vue'
 import PlannerHeader from '@/components/planner/PlannerHeader.vue'
 import InspirationCard from '@/components/planner/InspirationCard.vue'
 import EmptyStateCard from '@/components/planner/EmptyStateCard.vue'
+import { useItineraryStore } from '@/stores/itinerary'
 
 const destination = ref('')
 const days = ref(3)
 const budget = ref(5000)
 const travelStyle = ref('leisure')
-const generatedItinerary = ref<null | {
-  title: string
-  summary: string
-  destination: string
-  days: number
-  budget: number
-  styleLabel: string
-}>(null)
+const itineraryStore = useItineraryStore()
+const { currentItinerary } = storeToRefs(itineraryStore)
 
 const styleLabelMap: Record<string, string> = {
   leisure: '休闲放松',
@@ -78,14 +74,25 @@ const styleLabelMap: Record<string, string> = {
   foodie: '美食探索'
 }
 
-const generateItinerary = () => {
-  generatedItinerary.value = {
-    title: `${destination.value} ${days.value}日游`,
+const generatedItinerary = computed(() => {
+  if (!currentItinerary.value) return null
+  return {
+    title: currentItinerary.value.title,
     summary: '行程已生成，点击右上角导出或继续调整参数优化线路。',
+    destination: currentItinerary.value.destination,
+    days: currentItinerary.value.days,
+    budget: currentItinerary.value.budget,
+    styleLabel: styleLabelMap[currentItinerary.value.travel_style] || currentItinerary.value.travel_style
+  }
+})
+
+const generateItinerary = async () => {
+  await itineraryStore.createItinerary({
+    title: `${destination.value} ${days.value}日游`,
     destination: destination.value,
     days: days.value,
     budget: budget.value,
-    styleLabel: styleLabelMap[travelStyle.value] || travelStyle.value
-  }
+    travel_style: travelStyle.value as 'leisure' | 'adventure' | 'foodie'
+  })
 }
 </script>

@@ -34,7 +34,10 @@
       "Bash(do touch \"$dir/.gitkeep\")",
       "Bash(export PYTHONPATH=/d/DevProject/AI_Travel_Planner_Pro/backend:*)",
       "Bash(PYTHONPATH=/d/DevProject/AI_Travel_Planner_Pro/backend python -c:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

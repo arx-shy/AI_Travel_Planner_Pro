@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { User, AuthToken, LoginRequest, RegisterRequest } from '@/types/api'
+import api from '@/utils/api'
+import type { User, LoginRequest, RegisterRequest, LoginResponse, RegisterResponse } from '@/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
@@ -25,32 +26,14 @@ export const useAuthStore = defineStore('auth', () => {
   const login = async (credentials: LoginRequest) => {
     isLoading.value = true
     try {
-      // TODO: 调用登录API
-      // const response = await api.post<AuthResponse>('/auth/login', credentials)
+      const response = await api.post<LoginResponse>('/auth/login', credentials)
 
-      // 模拟登录成功
-      const mockUser: User = {
-        id: 1,
-        email: credentials.email,
-        name: 'Alex Chen',
-        membership_level: 'pro',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const mockToken: AuthToken = {
-        access_token: 'mock-jwt-token',
-        token_type: 'bearer',
-        expires_in: 3600
-      }
-
-      user.value = mockUser
-      token.value = mockToken.access_token
+      user.value = response.user
+      token.value = response.access_token
       isAuthenticated.value = true
 
-      // 存储到本地
-      localStorage.setItem('token', mockToken.access_token)
-      localStorage.setItem('user', JSON.stringify(mockUser))
+      localStorage.setItem('token', response.access_token)
+      localStorage.setItem('user', JSON.stringify(response.user))
 
       return { success: true }
     } catch (error) {
@@ -65,32 +48,14 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (data: RegisterRequest) => {
     isLoading.value = true
     try {
-      // TODO: 调用注册API
-      // const response = await api.post<AuthResponse>('/auth/register', data)
+      const response = await api.post<RegisterResponse>('/auth/register', data)
 
-      // 模拟注册成功
-      const mockUser: User = {
-        id: 1,
-        email: data.email,
-        name: data.name,
-        membership_level: 'free',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const mockToken: AuthToken = {
-        access_token: 'mock-jwt-token',
-        token_type: 'bearer',
-        expires_in: 3600
-      }
-
-      user.value = mockUser
-      token.value = mockToken.access_token
+      user.value = response.user
+      token.value = response.access_token
       isAuthenticated.value = true
 
-      // 存储到本地
-      localStorage.setItem('token', mockToken.access_token)
-      localStorage.setItem('user', JSON.stringify(mockUser))
+      localStorage.setItem('token', response.access_token)
+      localStorage.setItem('user', JSON.stringify(response.user))
 
       return { success: true }
     } catch (error) {

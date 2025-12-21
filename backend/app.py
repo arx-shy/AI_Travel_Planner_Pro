@@ -210,7 +210,7 @@ if __name__ == "__main__":
             port = int(sys.argv[1])
         except ValueError:
             print("Invalid port, using default 8000")
-    
+
     # Start application
     print("\n" + "="*50)
     print("Starting WanderFlow Backend")
@@ -219,11 +219,12 @@ if __name__ == "__main__":
     print(f"URL: http://localhost:{port}")
     print(f"Docs: http://localhost:{port}/docs")
     print("="*50 + "\n")
-    
+
+    # Run uvicorn - pass app instance directly without reload for stability
     uvicorn.run(
-        "app:app",
+        app,
         host="0.0.0.0",
         port=port,
-        reload=True,
+        reload=False,  # Disable reload to avoid import string issues
         log_level="info"
     )

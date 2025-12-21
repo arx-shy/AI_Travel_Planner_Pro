@@ -49,6 +49,10 @@
         >
           游客登录（免输入）
         </button>
+
+        <p v-if="errorMessage" class="text-sm text-red-500 text-center">
+          {{ errorMessage }}
+        </p>
       </form>
 
       <div class="mt-8 text-center">
@@ -71,13 +75,25 @@ const authStore = useAuthStore()
 const email = ref('')
 const name = ref('')
 const password = ref('')
+const errorMessage = ref('')
 
-const handleRegister = () => {
-  // Handle register logic
-  router.push('/planner')
+const handleRegister = async () => {
+  errorMessage.value = ''
+  const result = await authStore.register({
+    email: email.value,
+    name: name.value,
+    password: password.value
+  })
+
+  if (result.success) {
+    router.push('/planner')
+  } else if (result.error) {
+    errorMessage.value = result.error
+  }
 }
 
 const handleGuestLogin = async () => {
+  errorMessage.value = ''
   const result = await authStore.login({
     email: 'guest@wanderflow.app',
     password: 'guest'
@@ -85,6 +101,8 @@ const handleGuestLogin = async () => {
 
   if (result.success) {
     router.push('/planner')
+  } else if (result.error) {
+    errorMessage.value = result.error
   }
 }
 </script>

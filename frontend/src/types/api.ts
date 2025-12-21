@@ -129,6 +129,11 @@ export interface AuthToken {
 }
 
 export interface AuthResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
   user: User
-  token: AuthToken
 }
+
+export interface LoginResponse extends AuthResponse {}
+export interface RegisterResponse extends AuthResponse {}

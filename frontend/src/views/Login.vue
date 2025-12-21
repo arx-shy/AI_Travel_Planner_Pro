@@ -40,6 +40,18 @@
         >
           立即登录
         </button>
+
+        <button
+          type="button"
+          @click="handleGuestLogin"
+          class="w-full border border-slate-200 text-slate-600 font-semibold py-3 rounded-lg hover:border-teal-400 hover:text-teal-600 transition-all"
+        >
+          游客登录（免输入）
+        </button>
+
+        <p v-if="errorMessage" class="text-sm text-red-500 text-center">
+          {{ errorMessage }}
+        </p>
       </form>
 
       <div class="mt-8 text-center">
@@ -55,14 +67,40 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
+const errorMessage = ref('')
 
-const handleLogin = () => {
-  // Handle login logic
-  router.push('/planner')
+const handleLogin = async () => {
+  errorMessage.value = ''
+  const result = await authStore.login({
+    email: email.value,
+    password: password.value
+  })
+
+  if (result.success) {
+    router.push('/planner')
+  } else if (result.error) {
+    errorMessage.value = result.error
+  }
+}
+
+const handleGuestLogin = async () => {
+  errorMessage.value = ''
+  const result = await authStore.login({
+    email: 'guest@wanderflow.app',
+    password: 'guest'
+  })
+
+  if (result.success) {
+    router.push('/planner')
+  } else if (result.error) {
+    errorMessage.value = result.error
+  }
 }
 </script>
