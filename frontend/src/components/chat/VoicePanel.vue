@@ -15,7 +15,7 @@
           class="bg-red-500 hover:bg-red-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors"
           @click="$emit('record')"
         >
-          <i class="fas fa-microphone"></i>
+          <AppIcon name="microphone" />
         </button>
         <button
           v-else
@@ -23,7 +23,7 @@
           class="bg-slate-500 hover:bg-slate-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors"
           @click="$emit('stop')"
         >
-          <i class="fas fa-stop"></i>
+          <AppIcon name="stop" />
         </button>
         <button
           v-if="hasPlayback"
@@ -31,10 +31,10 @@
           class="bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center transition-colors"
           @click="$emit('play')"
         >
-          <i class="fas fa-play"></i>
+          <AppIcon name="play" />
         </button>
         <button type="button" class="text-slate-400 hover:text-slate-600" @click="$emit('close')">
-          <i class="fas fa-times"></i>
+          <AppIcon name="times" />
         </button>
       </div>
     </div>
@@ -42,6 +42,8 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 defineProps<{
   visible: boolean
   isRecording: boolean

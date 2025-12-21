@@ -24,7 +24,9 @@
         </div>
 
         <div class="text-center pt-8">
-          <button class="text-red-500 text-sm font-medium hover:underline">退出登录</button>
+          <AppButton variant="ghost" size="sm" class="text-red-500 hover:text-red-600">
+            退出登录
+          </AppButton>
         </div>
       </div>
     </main>
@@ -34,6 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import AppSidebar from '@/components/common/AppSidebar.vue'
+import AppButton from '@/components/common/AppButton.vue'
 import UserProfile from '@/components/settings/UserProfile.vue'
 import PreferenceSettings from '@/components/settings/PreferenceSettings.vue'
 import SecuritySettings from '@/components/settings/SecuritySettings.vue'

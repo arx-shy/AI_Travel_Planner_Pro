@@ -4,7 +4,7 @@
       v-if="role === 'assistant'"
       class="w-10 h-10 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center text-white shadow-sm"
     >
-      <i class="fas fa-robot"></i>
+      <AppIcon name="robot" />
     </div>
     <img
       v-else
@@ -24,6 +24,8 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 interface Props {
   role: 'user' | 'assistant'
   content: string

@@ -4,7 +4,7 @@
     <div class="space-y-4">
       <div class="flex items-center justify-between">
         <span class="text-slate-600 flex items-center gap-2">
-          <i class="fas fa-globe w-5 text-slate-400"></i> 语言
+          <AppIcon name="globe" class="w-5 text-slate-400" /> 语言
         </span>
         <select
           class="bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600 outline-none cursor-pointer"
@@ -17,7 +17,7 @@
       </div>
       <div class="flex items-center justify-between">
         <span class="text-slate-600 flex items-center gap-2">
-          <i class="fas fa-coins w-5 text-slate-400"></i> 货币单位
+          <AppIcon name="coins" class="w-5 text-slate-400" /> 货币单位
         </span>
         <select
           class="bg-slate-50 border-none rounded-lg text-sm p-2 text-slate-600 outline-none cursor-pointer"
@@ -30,7 +30,7 @@
       </div>
       <div class="flex items-center justify-between">
         <span class="text-slate-600 flex items-center gap-2">
-          <i class="fas fa-moon w-5 text-slate-400"></i> 深色模式
+          <AppIcon name="moon" class="w-5 text-slate-400" /> 深色模式
         </span>
         <label class="relative inline-flex items-center cursor-pointer">
           <input
@@ -47,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 withDefaults(
   defineProps<{
     language?: string

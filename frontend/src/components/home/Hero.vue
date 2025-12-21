@@ -13,19 +13,15 @@
           告别繁琐的攻略查询。输入您的预算和偏好，WanderFlow 在几秒钟内为您生成包含景点、交通、美食的完美行程。
         </p>
         <div class="mt-8 flex flex-wrap gap-4">
-          <router-link to="/planner" class="btn-primary text-lg px-8 py-4 shadow-xl hover:shadow-2xl">
-            立即创建行程 <i class="fas fa-magic ml-2"></i>
-          </router-link>
-          <button class="flex items-center gap-2 rounded-full border-2 border-slate-200 px-8 py-4 font-bold text-slate-600 transition-all hover:border-teal-500 hover:text-teal-500">
-            <i class="fas fa-play-circle text-xl"></i> 观看演示
-          </button>
-          <button
-            type="button"
-            class="flex items-center gap-2 rounded-full border-2 border-slate-200 px-6 py-4 font-bold text-slate-600 transition-all hover:border-teal-500 hover:text-teal-500"
-            @click="handleGuestLogin"
-          >
-            <i class="fas fa-user-check text-xl"></i> 游客体验
-          </button>
+          <AppButton to="/planner" variant="primary" size="lg" icon="magic">
+            立即创建行程
+          </AppButton>
+          <AppButton variant="secondary" size="lg" icon="play-circle">
+            观看演示
+          </AppButton>
+          <AppButton variant="secondary" size="lg" icon="user-check" @click="handleGuestLogin">
+            游客体验
+          </AppButton>
         </div>
 
         <div class="mt-10 flex items-center gap-4">
@@ -52,9 +48,9 @@
           >
 
           <div class="float-anim absolute -bottom-6 -left-6 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-xl">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-600">
-              <i class="fas fa-map-marker-alt"></i>
-            </div>
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-600">
+                <AppIcon name="map-marker-alt" />
+              </div>
             <div>
               <div class="text-sm font-bold text-slate-800">已抵达 巴黎</div>
               <div class="text-xs text-slate-500">距离目的地 2km</div>
@@ -63,8 +59,8 @@
 
           <div class="absolute -right-6 top-10 rounded-2xl bg-white/90 p-4 shadow-xl backdrop-blur">
             <div class="flex items-center gap-2">
-              <span class="text-yellow-500"><i class="fas fa-star"></i></span>
-              <span class="font-bold text-slate-800">4.9</span>
+                <span class="text-yellow-500"><AppIcon name="star" /></span>
+                <span class="font-bold text-slate-800">4.9</span>
               <span class="text-xs text-slate-400">(行程评分)</span>
             </div>
           </div>
@@ -80,6 +76,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppButton from '@/components/common/AppButton.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

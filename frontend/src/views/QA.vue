@@ -7,19 +7,19 @@
             <h4 class="text-sm font-bold text-teal-800 mb-1">对话模式</h4>
             <div class="space-y-2 text-xs">
               <div class="flex items-center gap-2 text-slate-600">
-                <i class="fas fa-circle text-[8px] text-green-500"></i>
+                <AppIcon name="circle" size="xs" class="text-green-500" />
                 <span>智能对话</span>
               </div>
               <div class="flex items-center gap-2 text-slate-600">
-                <i class="fas fa-circle text-[8px] text-blue-500"></i>
+                <AppIcon name="circle" size="xs" class="text-blue-500" />
                 <span>知识库问答</span>
               </div>
               <div class="flex items-center gap-2 text-slate-600">
-                <i class="fas fa-circle text-[8px] text-yellow-500"></i>
+                <AppIcon name="circle" size="xs" class="text-yellow-500" />
                 <span>天气查询</span>
               </div>
               <div class="flex items-center gap-2 text-slate-600">
-                <i class="fas fa-circle text-[8px] text-purple-500"></i>
+                <AppIcon name="circle" size="xs" class="text-purple-500" />
                 <span>语音对话</span>
               </div>
             </div>
@@ -39,7 +39,7 @@
           <div class="flex items-center gap-3">
             <FeatureToggle
               :label="`知识库: ${knowledgeEnabled ? 'ON' : 'OFF'}`"
-              icon="fas fa-database"
+              icon="database"
               :active="knowledgeEnabled"
               active-class="bg-blue-200 text-blue-700"
               inactive-class="bg-blue-100 text-blue-600"
@@ -47,7 +47,7 @@
             />
             <FeatureToggle
               :label="`天气: ${weatherEnabled ? 'ON' : 'OFF'}`"
-              icon="fas fa-cloud-sun"
+              icon="cloud-sun"
               :active="weatherEnabled"
               active-class="bg-yellow-200 text-yellow-700"
               inactive-class="bg-yellow-100 text-yellow-600"
@@ -55,7 +55,7 @@
             />
             <FeatureToggle
               :label="`语音: ${voiceEnabled ? 'ON' : 'OFF'}`"
-              icon="fas fa-microphone"
+              icon="microphone"
               :active="voiceEnabled"
               active-class="bg-purple-200 text-purple-700"
               inactive-class="bg-purple-100 text-purple-600"
@@ -70,13 +70,16 @@
           <div class="flex justify-center fade-in-up">
             <div class="glass-card p-6 max-w-2xl text-center">
               <div class="w-16 h-16 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl shadow-lg float-anim">
-                <i class="fas fa-robot"></i>
+                <AppIcon name="robot" size="lg" />
               </div>
               <h3 class="text-xl font-bold text-slate-800 mb-2">嗨，我是您的全能旅行助理！</h3>
               <p class="text-slate-500 text-sm mb-6">您可以向我咨询天气、签证政策、行程规划或任何旅行问题。</p>
               <QuickQuestions :questions="quickQuestions" @select="handleQuickQuestion">
                 <template #icon="{ question }">
-                  <i :class="quickQuestionIcon(question)" class="mr-2"></i>
+                  <AppIcon
+                    :name="quickQuestionIcon(question).name"
+                    :class="`mr-2 ${quickQuestionIcon(question).className}`"
+                  />
                 </template>
               </QuickQuestions>
             </div>
@@ -114,9 +117,9 @@
           />
           <div class="flex justify-center mt-3">
             <div class="flex gap-2 text-xs text-slate-400">
-              <span><i class="fas fa-keyboard mr-1"></i>Enter 发送</span>
+              <span><AppIcon name="keyboard" class="mr-1" />Enter 发送</span>
               <span>|</span>
-              <span><i class="fas fa-magic mr-1"></i>点击快捷问题</span>
+              <span><AppIcon name="magic" class="mr-1" />点击快捷问题</span>
             </div>
           </div>
         </div>
@@ -129,6 +132,7 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppSidebar from '@/components/common/AppSidebar.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import ChatContainer from '@/components/chat/ChatContainer.vue'
 import FeatureToggle from '@/components/chat/FeatureToggle.vue'
 import MessageList from '@/components/chat/MessageList.vue'
@@ -172,10 +176,10 @@ const quickQuestions = [
 ]
 
 const quickQuestionIcon = (question: string) => {
-  if (question.includes('天气')) return 'fas fa-cloud-sun text-yellow-500'
-  if (question.includes('行程')) return 'fas fa-map-marked-alt text-green-500'
-  if (question.includes('签证')) return 'fas fa-passport text-blue-500'
-  return 'fas fa-volume-up text-purple-500'
+  if (question.includes('天气')) return { name: 'cloud-sun', className: 'text-yellow-500' }
+  if (question.includes('行程')) return { name: 'map-marked-alt', className: 'text-green-500' }
+  if (question.includes('签证')) return { name: 'passport', className: 'text-blue-500' }
+  return { name: 'volume-up', className: 'text-purple-500' }
 }
 
 const toggleFeature = (feature: 'knowledge' | 'weather' | 'voice') => {

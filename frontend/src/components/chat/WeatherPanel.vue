@@ -10,16 +10,12 @@
           @input="$emit('update:city', ($event.target as HTMLInputElement).value)"
         >
       </div>
-      <button
-        type="button"
-        class="btn-primary px-6 py-2 text-sm"
-        @click="$emit('query')"
-      >
-        <i class="fas fa-cloud-sun mr-1"></i>查询天气
-      </button>
-      <button type="button" class="text-slate-400 hover:text-slate-600" @click="$emit('close')">
-        <i class="fas fa-times"></i>
-      </button>
+      <AppButton variant="primary" size="sm" icon="cloud-sun" @click="$emit('query')">
+        查询天气
+      </AppButton>
+      <AppButton variant="ghost" size="sm" class="text-slate-400 hover:text-slate-600" @click="$emit('close')">
+        <AppIcon name="times" />
+      </AppButton>
     </div>
 
     <div v-if="loading" class="mt-4 text-center text-slate-500 text-sm">查询中...</div>
@@ -48,6 +44,9 @@
 </template>
 
 <script setup lang="ts">
+import AppButton from '@/components/common/AppButton.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+
 interface WeatherItem {
   date: string
   icon: string

@@ -1,14 +1,12 @@
 <template>
-  <button
-    type="button"
-    class="btn-primary w-full justify-center mt-auto py-3 text-lg"
-    @click="$emit('generate')"
-  >
-    <i class="fas fa-magic"></i> {{ label }}
-  </button>
+  <AppButton block icon="magic" size="lg" @click="$emit('generate')">
+    {{ label }}
+  </AppButton>
 </template>
 
 <script setup lang="ts">
+import AppButton from '@/components/common/AppButton.vue'
+
 withDefaults(
   defineProps<{
     label?: string

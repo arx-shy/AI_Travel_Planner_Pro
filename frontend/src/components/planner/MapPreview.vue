@@ -6,14 +6,16 @@
       alt="地图预览"
     >
     <div class="absolute inset-0 bg-black/10 flex items-center justify-center group-hover:bg-black/20 transition-colors">
-      <button class="bg-white px-4 py-2 rounded-full shadow-lg font-bold text-slate-700 flex items-center gap-2 transform transition-transform group-hover:scale-105">
-        <i class="fas fa-map"></i> 查看地图预览
-      </button>
+      <AppButton variant="secondary" size="sm" icon="map" class="rounded-full shadow-lg group-hover:scale-105">
+        查看地图预览
+      </AppButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppButton from '@/components/common/AppButton.vue'
+
 withDefaults(
   defineProps<{
     imageUrl?: string

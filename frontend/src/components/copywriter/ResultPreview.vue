@@ -1,7 +1,7 @@
 <template>
   <div class="glass-card p-6 flex flex-col h-full bg-white/60 relative overflow-hidden">
     <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-      <i class="fas fa-quote-right text-9xl text-slate-800"></i>
+      <AppIcon name="quote-right" size="xl" class="text-9xl text-slate-800" />
     </div>
 
     <h3 class="text-lg font-bold text-slate-700 mb-4">生成结果预览</h3>
@@ -27,23 +27,22 @@
       </div>
 
       <div v-else class="text-center text-slate-400 py-16">
-        <i class="fas fa-magic text-4xl mb-4"></i>
+        <AppIcon name="magic" size="xl" class="mb-4" />
         <p>点击生成按钮开始创作</p>
       </div>
     </div>
 
     <div class="flex gap-3 mt-4">
-      <button class="flex-1 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
-        <i class="far fa-copy"></i> 复制
-      </button>
-      <button class="flex-1 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
-        <i class="fas fa-share-alt"></i> 分享
-      </button>
+      <AppButton block variant="secondary" icon="copy" iconPrefix="far">复制</AppButton>
+      <AppButton block variant="secondary" icon="share-alt">分享</AppButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppButton from '@/components/common/AppButton.vue'
+import AppIcon from '@/components/common/AppIcon.vue'
+
 withDefaults(
   defineProps<{
     content: string

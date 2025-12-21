@@ -33,21 +33,8 @@
           <a href="#" class="text-teal-600 hover:text-teal-700">忘记密码?</a>
         </div>
 
-        <button
-          type="button"
-          @click="handleLogin"
-          class="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all"
-        >
-          立即登录
-        </button>
-
-        <button
-          type="button"
-          @click="handleGuestLogin"
-          class="w-full border border-slate-200 text-slate-600 font-semibold py-3 rounded-lg hover:border-teal-400 hover:text-teal-600 transition-all"
-        >
-          游客登录（免输入）
-        </button>
+        <AppButton block @click="handleLogin">立即登录</AppButton>
+        <AppButton block variant="secondary" @click="handleGuestLogin">游客登录（免输入）</AppButton>
 
         <p v-if="errorMessage" class="text-sm text-red-500 text-center">
           {{ errorMessage }}
@@ -68,6 +55,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import AppButton from '@/components/common/AppButton.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -5,14 +5,17 @@
     class="text-xs px-3 py-1 rounded-full transition-colors"
     @click="$emit('toggle')"
   >
-    <i :class="icon" class="mr-1"></i>{{ label }}
+    <AppIcon :name="icon" :prefix="iconPrefix" class="mr-1" />{{ label }}
   </button>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 interface Props {
   label: string
   icon: string
+  iconPrefix?: 'fas' | 'far' | 'fab'
   active: boolean
   activeClass: string
   inactiveClass: string

@@ -8,7 +8,7 @@
         :class="modelValue === 'xiaohongshu' ? 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100' : 'border-slate-200 bg-white hover:bg-red-50'"
         @click="$emit('update:modelValue', 'xiaohongshu')"
       >
-        <i class="fab fa-instagram"></i> 小红书
+        <AppIcon name="instagram" prefix="fab" /> 小红书
       </button>
       <button
         type="button"
@@ -16,7 +16,7 @@
         :class="modelValue === 'wechat' ? 'border-green-200 bg-green-50 text-green-600 hover:bg-green-100' : 'border-slate-200 bg-white hover:bg-green-50'"
         @click="$emit('update:modelValue', 'wechat')"
       >
-        <i class="fab fa-weixin"></i> 朋友圈
+        <AppIcon name="weixin" prefix="fab" /> 朋友圈
       </button>
       <button
         type="button"
@@ -24,13 +24,15 @@
         :class="modelValue === 'weibo' ? 'border-blue-200 bg-blue-50 text-blue-500 hover:bg-blue-100' : 'border-slate-200 bg-white hover:bg-blue-50'"
         @click="$emit('update:modelValue', 'weibo')"
       >
-        <i class="fab fa-twitter"></i> 微博
+        <AppIcon name="twitter" prefix="fab" /> 微博
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 defineProps<{
   modelValue: 'xiaohongshu' | 'wechat' | 'weibo'
 }>()

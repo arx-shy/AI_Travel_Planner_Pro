@@ -13,12 +13,14 @@
       class="absolute right-2 top-2 w-10 h-10 bg-teal-500 hover:bg-teal-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
       @click="$emit('send')"
     >
-      <i class="fas fa-paper-plane"></i>
+      <AppIcon name="paper-plane" />
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppIcon from '@/components/common/AppIcon.vue'
+
 defineProps<{
   modelValue: string
   placeholder?: string

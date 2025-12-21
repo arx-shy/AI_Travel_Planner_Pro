@@ -9,14 +9,16 @@
         <div class="text-2xl font-bold mb-1">WanderFlow <span class="text-yellow-400">Pro</span></div>
         <div class="text-slate-400 text-sm">享受无限 AI 生成、离线地图和专属客服支持。</div>
       </div>
-      <button class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors">
+      <AppButton variant="secondary" size="sm" class="bg-white text-slate-900 hover:bg-slate-200">
         管理订阅
-      </button>
+      </AppButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppButton from '@/components/common/AppButton.vue'
+
 withDefaults(
   defineProps<{
     nextBillingDate?: string

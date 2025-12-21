@@ -8,7 +8,7 @@
       <div>
         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">目的地</label>
         <div class="input-icon-wrapper">
-          <i class="fas fa-map-marker-alt"></i>
+          <AppIcon name="map-marker-alt" />
           <input
             :value="destination"
             type="text"
@@ -56,6 +56,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import AppIcon from '@/components/common/AppIcon.vue'
 import StyleSelector from '@/components/planner/StyleSelector.vue'
 import GenerateButton from '@/components/planner/GenerateButton.vue'
 
