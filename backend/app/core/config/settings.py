@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL_NAME: str = "gpt-4-turbo-preview"
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    QA_API_KEY: Optional[str] = None
 
     # Third-party Services
     WEATHER_API_KEY: Optional[str] = None
