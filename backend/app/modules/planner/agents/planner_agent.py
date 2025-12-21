@@ -7,7 +7,7 @@ It uses LLM to create intelligent, personalized travel plans.
 
 from typing import List, Dict, Any
 from app.core.ai.factory import LLMFactory
-from app.core.config import settings
+from app.core.config.settings import settings
 from langchain.schema import HumanMessage, SystemMessage
 from app.modules.planner.prompts.planning_prompts import PLANNING_SYSTEM_PROMPT
 import logging

@@ -6,7 +6,7 @@ This module provides FastAPI dependency functions for authentication.
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
 from app.core.security.jwt import verify_token, get_user_id_from_token
 from app.modules.users.daos.user_dao import UserDAO
@@ -15,8 +15,8 @@ from app.modules.users.daos.user_dao import UserDAO
 security = HTTPBearer()
 
 
-def get_current_user(
-    db: Session = Depends(get_db),
+async def get_current_user(
+    db: AsyncSession = Depends(get_db),
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """
@@ -54,7 +54,7 @@ def get_current_user(
     
     # Get user from database
     user_dao = UserDAO(db)
-    user = user_dao.get_by_id(user_id)
+    user = await user_dao.get_by_id(user_id)
     
     if user is None:
         raise HTTPException(
@@ -69,3 +69,12 @@ def get_current_user(
         )
     
     return user
+
+
+async def get_current_active_user(
+    current_user = Depends(get_current_user)
+):
+    """
+    Alias for active user dependency.
+    """
+    return current_user

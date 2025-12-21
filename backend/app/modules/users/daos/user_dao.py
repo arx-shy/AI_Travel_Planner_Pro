@@ -4,8 +4,8 @@ User Data Access Object (DAO)
 This module provides database access operations for users.
 """
 
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.users.models.user import User
 
 
@@ -14,7 +14,7 @@ class UserDAO:
     Data Access Object for User model
     """
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         Initialize UserDAO
         
@@ -23,7 +23,7 @@ class UserDAO:
         """
         self.db = db
     
-    def get_by_id(self, user_id: int) -> User:
+    async def get_by_id(self, user_id: int) -> User:
         """
         Get user by ID
         
@@ -33,9 +33,10 @@ class UserDAO:
         Returns:
             User object or None
         """
-        return self.db.query(User).filter(User.id == user_id).first()
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalars().first()
     
-    def get_by_email(self, email: str) -> User:
+    async def get_by_email(self, email: str) -> User:
         """
         Get user by email
         
@@ -45,9 +46,10 @@ class UserDAO:
         Returns:
             User object or None
         """
-        return self.db.query(User).filter(User.email == email).first()
+        result = await self.db.execute(select(User).where(User.email == email))
+        return result.scalars().first()
     
-    def create(self, user: User) -> User:
+    async def create(self, user: User) -> User:
         """
         Create a new user
         
@@ -58,11 +60,11 @@ class UserDAO:
             Created user object
         """
         self.db.add(user)
-        self.db.commit()
-        self.db.refresh(user)
+        await self.db.commit()
+        await self.db.refresh(user)
         return user
     
-    def update(self, user_id: int, **kwargs) -> User:
+    async def update(self, user_id: int, **kwargs) -> User:
         """
         Update user
         
@@ -73,15 +75,15 @@ class UserDAO:
         Returns:
             Updated user object
         """
-        user = self.get_by_id(user_id)
+        user = await self.get_by_id(user_id)
         if user:
             for key, value in kwargs.items():
                 setattr(user, key, value)
-            self.db.commit()
-            self.db.refresh(user)
+            await self.db.commit()
+            await self.db.refresh(user)
         return user
     
-    def delete(self, user_id: int) -> bool:
+    async def delete(self, user_id: int) -> bool:
         """
         Delete user
         
@@ -91,14 +93,14 @@ class UserDAO:
         Returns:
             True if deleted, False otherwise
         """
-        user = self.get_by_id(user_id)
+        user = await self.get_by_id(user_id)
         if user:
-            self.db.delete(user)
-            self.db.commit()
+            await self.db.delete(user)
+            await self.db.commit()
             return True
         return False
     
-    def email_exists(self, email: str) -> bool:
+    async def email_exists(self, email: str) -> bool:
         """
         Check if email exists
         
@@ -108,4 +110,5 @@ class UserDAO:
         Returns:
             True if exists, False otherwise
         """
-        return self.db.query(User).filter(User.email == email).first() is not None
+        result = await self.db.execute(select(User).where(User.email == email))
+        return result.scalars().first() is not None

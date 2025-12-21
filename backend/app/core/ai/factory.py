@@ -8,7 +8,7 @@ It supports multiple AI providers (OpenAI, Spark, GLM, etc.) through a unified i
 from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain.schema import BaseMessage, HumanMessage, AIMessage
-from app.core.config import settings
+from app.core.config.settings import settings
 import logging
 
 logger = logging.getLogger(__name__)

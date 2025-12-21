@@ -7,6 +7,7 @@ It loads configuration from environment variables and .env files.
 
 from pydantic_settings import BaseSettings
 from typing import List, Optional
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -97,7 +98,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = ["*"]
 
     class Config:
-        env_file = ".env"
+        env_file = str(Path(__file__).parent.parent.parent.parent / ".env")
+        env_file_encoding = "utf-8"
         case_sensitive = True
 
 

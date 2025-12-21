@@ -24,7 +24,7 @@ class Itinerary(BaseModel):
     travel_style = Column(String(20), default="leisure", nullable=False)
     status = Column(String(20), default="draft", nullable=False)
     ai_generated = Column(SqlEnum("draft", "active", "completed", "archived"), default="draft")
-    metadata = Column(Text, nullable=True)  # JSON field
+    metadata_json = Column("metadata", Text, nullable=True)  # JSON field
 
     # Relationships
     days_detail = relationship("DayDetail", back_populates="itinerary", cascade="all, delete-orphan")

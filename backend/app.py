@@ -34,7 +34,7 @@ import uvicorn
 
 # Import settings
 try:
-    from app.core.config import settings
+    from app.core.config.settings import settings
     HAS_SETTINGS = True
     print("[OK] Settings loaded successfully")
 except ImportError as e:

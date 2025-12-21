@@ -18,7 +18,7 @@ class PlanBase(BaseModel):
     departure: Optional[str] = Field(None, max_length=200)
     days: int = Field(..., ge=1, le=365)
     budget: Optional[float] = Field(None, ge=0)
-    travel_style: str = Field("leisure", regex="^(leisure|adventure|foodie)$")
+    travel_style: str = Field("leisure", pattern="^(leisure|adventure|foodie)$")
 
 
 class PlanCreate(PlanBase):
@@ -34,7 +34,7 @@ class PlanUpdate(BaseModel):
     """
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     budget: Optional[float] = Field(None, ge=0)
-    status: Optional[str] = Field(None, regex="^(draft|active|completed|archived)$")
+    status: Optional[str] = Field(None, pattern="^(draft|active|completed|archived)$")
 
 
 class DayDetail(BaseModel):

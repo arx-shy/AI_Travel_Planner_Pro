@@ -6,7 +6,7 @@ This module defines FastAPI routes for user operations.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
 from app.core.security.deps import get_current_user
 from app.modules.users.services.user_service import UserService
@@ -20,7 +20,7 @@ from app.modules.users.schemas.user import (
     PasswordChange
 )
 from app.modules.users.models.user import User
-from app.core.config import settings
+from app.core.config.settings import settings
 
 router = APIRouter()
 security = HTTPBearer()
@@ -29,14 +29,14 @@ security = HTTPBearer()
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Register a new user
     """
     try:
         user_service = UserService(db)
-        user, access_token = user_service.register_user(
+        user, access_token = await user_service.register_user(
             email=user_data.email,
             password=user_data.password,
             name=user_data.name
@@ -58,13 +58,13 @@ async def register(
 @router.post("/login", response_model=LoginResponse)
 async def login(
     login_data: UserLogin,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Authenticate user and return access token
     """
     user_service = UserService(db)
-    result = user_service.authenticate_user(
+    result = await user_service.authenticate_user(
         email=login_data.email,
         password=login_data.password
     )
@@ -99,14 +99,14 @@ async def get_current_user_info(
 @router.put("/me", response_model=UserResponse)
 async def update_current_user(
     user_data: UserUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Update current user information
     """
     user_service = UserService(db)
-    updated_user = user_service.update_user(
+    updated_user = await user_service.update_user(
         user_id=current_user.id,
         name=user_data.name
     )
@@ -123,7 +123,7 @@ async def update_current_user(
 @router.post("/change-password")
 async def change_password(
     password_data: PasswordChange,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -132,7 +132,7 @@ async def change_password(
     user_service = UserService(db)
     
     try:
-        user_service.change_password(
+        await user_service.change_password(
             user_id=current_user.id,
             old_password=password_data.old_password,
             new_password=password_data.new_password

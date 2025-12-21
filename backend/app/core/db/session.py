@@ -19,7 +19,7 @@ if env_file.exists():
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
-from app.core.config import settings
+from app.core.config.settings import settings
 from app.core.db.base import Base
 import logging
 

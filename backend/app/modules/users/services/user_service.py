@@ -5,7 +5,7 @@ This module provides business logic for user operations.
 """
 
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security.password import hash_password, verify_password
 from app.core.security.jwt import create_access_token
 from app.modules.users.models.user import User
@@ -17,7 +17,7 @@ class UserService:
     User business logic service
     """
     
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         """
         Initialize UserService
         
@@ -27,7 +27,7 @@ class UserService:
         self.db = db
         self.user_dao = UserDAO(db)
     
-    def register_user(
+    async def register_user(
         self,
         email: str,
         password: str,
@@ -48,7 +48,7 @@ class UserService:
             ValueError: If email already exists
         """
         # Check if email exists
-        if self.user_dao.email_exists(email):
+        if await self.user_dao.email_exists(email):
             raise ValueError("Email already registered")
         
         # Create user
@@ -61,14 +61,14 @@ class UserService:
             membership_level='free'
         )
         
-        user = self.user_dao.create(user)
+        user = await self.user_dao.create(user)
         
         # Create access token
         access_token = create_access_token(subject=str(user.id))
         
         return user, access_token
     
-    def authenticate_user(
+    async def authenticate_user(
         self,
         email: str,
         password: str
@@ -84,7 +84,7 @@ class UserService:
             Tuple of (user, access_token) or None if authentication fails
         """
         # Get user by email
-        user = self.user_dao.get_by_email(email)
+        user = await self.user_dao.get_by_email(email)
         
         if not user:
             return None
@@ -98,7 +98,7 @@ class UserService:
         
         return user, access_token
     
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
         """
         Get user by ID
         
@@ -108,9 +108,9 @@ class UserService:
         Returns:
             User object or None
         """
-        return self.user_dao.get_by_id(user_id)
+        return await self.user_dao.get_by_id(user_id)
     
-    def update_user(
+    async def update_user(
         self,
         user_id: int,
         **kwargs
@@ -130,9 +130,9 @@ class UserService:
         for field in sensitive_fields:
             kwargs.pop(field, None)
         
-        return self.user_dao.update(user_id, **kwargs)
+        return await self.user_dao.update(user_id, **kwargs)
     
-    def change_password(
+    async def change_password(
         self,
         user_id: int,
         old_password: str,
@@ -152,7 +152,7 @@ class UserService:
         Raises:
             ValueError: If old password is incorrect
         """
-        user = self.user_dao.get_by_id(user_id)
+        user = await self.user_dao.get_by_id(user_id)
         
         if not user:
             return False
@@ -163,6 +163,6 @@ class UserService:
         
         # Update password
         hashed_new_pwd = hash_password(new_password)
-        self.user_dao.update(user_id, hashed_password=hashed_new_pwd)
-        
+        await self.user_dao.update(user_id, hashed_password=hashed_new_pwd)
+
         return True

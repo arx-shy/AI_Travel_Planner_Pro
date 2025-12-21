@@ -7,7 +7,7 @@ This module provides JWT token creation and verification functionality.
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import jwt, JWTError
-from app.core.config import settings
+from app.core.config.settings import settings
 
 
 def create_access_token(

@@ -2,28 +2,28 @@
 Travel Planner API Routes (v1)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.async import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
-from app.core.security.deps import get_current_active_user
-from app.modules.planner.schemas.plan_schema import ItineraryCreate, ItineraryUpdate, ItineraryResponse
+from app.core.security.deps import get_current_user
+from app.modules.planner.schemas.plan_schema import PlanCreate, PlanUpdate, PlanResponse
 from app.modules.planner.services.plan_service import PlanService
 
 router = APIRouter()
 
-@router.post("/generate", response_model=ItineraryResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/generate", response_model=PlanResponse, status_code=status.HTTP_201_CREATED)
 async def generate_itinerary(
-    itinerary_data: ItineraryCreate,
+    itinerary_data: PlanCreate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
     plan_service = PlanService(db)
     itinerary = await plan_service.generate_itinerary(user_id=current_user.id, itinerary_data=itinerary_data)
     return itinerary
 
-@router.get("/itineraries", response_model=list[ItineraryResponse])
+@router.get("/itineraries", response_model=list[PlanResponse])
 async def get_my_itineraries(
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user),
+    current_user = Depends(get_current_user),
     skip: int = 0,
     limit: int = 100
 ):
@@ -31,11 +31,11 @@ async def get_my_itineraries(
     itineraries = await plan_service.get_user_itineraries(user_id=current_user.id, skip=skip, limit=limit)
     return itineraries
 
-@router.get("/itineraries/{itinerary_id}", response_model=ItineraryResponse)
+@router.get("/itineraries/{itinerary_id}", response_model=PlanResponse)
 async def get_itinerary(
     itinerary_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
     plan_service = PlanService(db)
     itinerary = await plan_service.get_itinerary(itinerary_id=itinerary_id, user_id=current_user.id)
@@ -43,12 +43,12 @@ async def get_itinerary(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
     return itinerary
 
-@router.put("/itineraries/{itinerary_id}", response_model=ItineraryResponse)
+@router.put("/itineraries/{itinerary_id}", response_model=PlanResponse)
 async def update_itinerary(
     itinerary_id: int,
-    itinerary_data: ItineraryUpdate,
+    itinerary_data: PlanUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
     plan_service = PlanService(db)
     itinerary = await plan_service.update_itinerary(itinerary_id=itinerary_id, user_id=current_user.id, itinerary_data=itinerary_data)
@@ -60,7 +60,7 @@ async def update_itinerary(
 async def delete_itinerary(
     itinerary_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
     plan_service = PlanService(db)
     success = await plan_service.delete_itinerary(itinerary_id=itinerary_id, user_id=current_user.id)
