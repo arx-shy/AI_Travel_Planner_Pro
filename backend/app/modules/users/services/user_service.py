@@ -5,11 +5,16 @@ This module provides business logic for user operations.
 """
 
 from typing import Optional
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security.password import hash_password, verify_password
 from app.core.security.jwt import create_access_token
 from app.modules.users.models.user import User
 from app.modules.users.daos.user_dao import UserDAO
+from app.modules.users.daos.user_settings_dao import UserSettingsDAO
+from app.modules.users.daos.subscription_dao import SubscriptionDAO
+from app.modules.users.models.user_settings import UserSettings
+from app.modules.users.models.subscription import Subscription
 
 
 class UserService:
@@ -26,6 +31,8 @@ class UserService:
         """
         self.db = db
         self.user_dao = UserDAO(db)
+        self.user_settings_dao = UserSettingsDAO(db)
+        self.subscription_dao = SubscriptionDAO(db)
     
     async def register_user(
         self,
@@ -166,3 +173,36 @@ class UserService:
         await self.user_dao.update(user_id, hashed_password=hashed_new_pwd)
 
         return True
+
+    async def get_or_create_settings(self, user_id: int) -> UserSettings:
+        settings = await self.user_settings_dao.get_by_user_id(user_id)
+        if settings:
+            return settings
+        settings = UserSettings(
+            user_id=user_id,
+            language="zh-CN",
+            theme="auto",
+            timezone="Asia/Shanghai",
+            currency="CNY",
+            preferences={}
+        )
+        return await self.user_settings_dao.create(settings)
+
+    async def update_settings(self, user_id: int, **kwargs) -> UserSettings:
+        settings = await self.get_or_create_settings(user_id)
+        return await self.user_settings_dao.update(settings, **kwargs)
+
+    async def get_or_create_subscription(self, user_id: int) -> Subscription:
+        subscription = await self.subscription_dao.get_by_user_id(user_id)
+        if subscription:
+            return subscription
+        now = datetime.utcnow()
+        subscription = Subscription(
+            user_id=user_id,
+            plan_type="free",
+            status="active",
+            start_date=now,
+            end_date=now + timedelta(days=365),
+            auto_renew=False
+        )
+        return await self.subscription_dao.create(subscription)

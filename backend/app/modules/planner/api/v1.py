@@ -24,11 +24,11 @@ async def generate_itinerary(
 async def get_my_itineraries(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 100
+    page: int = 1,
+    size: int = 10
 ):
     plan_service = PlanService(db)
-    itineraries = await plan_service.get_user_itineraries(user_id=current_user.id, skip=skip, limit=limit)
+    itineraries = await plan_service.get_user_itineraries(user_id=current_user.id, page=page, size=size)
     return itineraries
 
 @router.get("/itineraries/{itinerary_id}", response_model=PlanResponse)

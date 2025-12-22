@@ -14,6 +14,7 @@ import logging
 from app.core.config import settings
 from app.core.db.session import init_db
 from app.modules.users.api.v1 import router as users_router
+from app.modules.users.api.settings import router as users_settings_router
 from app.modules.planner.api.v1 import router as planner_router
 from app.modules.qa.api.v1 import router as qa_router
 from app.modules.copywriter.api.v1 import router as copywriter_router
@@ -84,6 +85,12 @@ app.include_router(
     users_router,
     prefix="/api/v1/auth",
     tags=["Authentication"]
+)
+
+app.include_router(
+    users_settings_router,
+    prefix="/api/v1/users",
+    tags=["Users"]
 )
 
 app.include_router(

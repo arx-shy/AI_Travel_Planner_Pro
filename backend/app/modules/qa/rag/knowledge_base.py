@@ -6,8 +6,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 import re
+import json
+import hashlib
+import pickle
 
 import httpx
 from PyPDF2 import PdfReader
@@ -36,6 +39,9 @@ class KnowledgeBase:
         max_docs: int = 5
     ):
         self.dataset_dir = dataset_dir or Path(__file__).resolve().parents[4] / "dataset"
+        self.cache_dir = Path(__file__).resolve().parents[4] / ".cache" / "qa_rag"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        (self.cache_dir / "texts").mkdir(parents=True, exist_ok=True)
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.max_pages = max_pages
@@ -43,6 +49,7 @@ class KnowledgeBase:
         self._chunks: List[Chunk] = []
         self._store: Optional[BM25VectorStore] = None
         self._retriever: Optional[Retriever] = None
+        self._current_index_key: Optional[str] = None
 
     def _list_pdfs(self) -> List[Path]:
         if not self.dataset_dir.exists():
@@ -81,14 +88,40 @@ class KnowledgeBase:
 
         return pdfs[: min(self.max_docs, len(pdfs))]
 
+    def _cache_key_for_pdf(self, pdf_path: Path) -> str:
+        return hashlib.sha256(str(pdf_path).encode("utf-8")).hexdigest()
+
+    def _get_text_cache_paths(self, pdf_path: Path) -> Tuple[Path, Path]:
+        cache_key = self._cache_key_for_pdf(pdf_path)
+        text_path = self.cache_dir / "texts" / f"{cache_key}.txt"
+        meta_path = self.cache_dir / "texts" / f"{cache_key}.json"
+        return text_path, meta_path
+
     def _read_pdf_text(self, pdf_path: Path) -> str:
+        text_path, meta_path = self._get_text_cache_paths(pdf_path)
+        stats = pdf_path.stat()
+        meta = {"mtime": stats.st_mtime, "size": stats.st_size}
+        if text_path.exists() and meta_path.exists():
+            try:
+                cached_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                if cached_meta == meta:
+                    return text_path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                pass
+
         reader = PdfReader(str(pdf_path))
         pages = reader.pages[: self.max_pages]
         texts = []
         for page in pages:
             text = page.extract_text() or ""
             texts.append(text)
-        return "\n".join(texts)
+        full_text = "\n".join(texts)
+        try:
+            text_path.write_text(full_text, encoding="utf-8")
+            meta_path.write_text(json.dumps(meta, ensure_ascii=True), encoding="utf-8")
+        except Exception:
+            pass
+        return full_text
 
     def _chunk_text(self, text: str, source: str) -> List[Chunk]:
         chunks: List[Chunk] = []
@@ -118,9 +151,63 @@ class KnowledgeBase:
         self._store = BM25VectorStore(chunks)
         self._retriever = Retriever(self._store)
 
+    def _index_signature(self, pdfs: List[Path]) -> Tuple[str, Dict[str, object]]:
+        files = []
+        for pdf in pdfs:
+            stat = pdf.stat()
+            files.append(
+                {
+                    "name": pdf.name,
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime,
+                }
+            )
+        payload = {
+            "files": sorted(files, key=lambda item: item["name"]),
+            "chunk_size": self.chunk_size,
+            "chunk_overlap": self.chunk_overlap,
+            "max_pages": self.max_pages,
+        }
+        signature = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+        return signature, payload
+
+    def _index_paths(self, signature: str) -> Tuple[Path, Path]:
+        index_path = self.cache_dir / f"{signature}.pkl"
+        meta_path = self.cache_dir / f"{signature}.json"
+        return index_path, meta_path
+
+    def _load_index(self, signature: str) -> bool:
+        index_path, meta_path = self._index_paths(signature)
+        if not index_path.exists() or not meta_path.exists():
+            return False
+        try:
+            state = pickle.loads(index_path.read_bytes())
+            store = BM25VectorStore.from_state(state)
+            self._store = store
+            self._retriever = Retriever(store)
+            return True
+        except Exception:
+            return False
+
+    def _save_index(self, signature: str, meta: Dict[str, object]) -> None:
+        if not self._store:
+            return
+        index_path, meta_path = self._index_paths(signature)
+        try:
+            index_path.write_bytes(pickle.dumps(self._store.to_state()))
+            meta_path.write_text(json.dumps(meta, ensure_ascii=True), encoding="utf-8")
+        except Exception:
+            pass
+
     def retrieve(self, query: str, top_k: int = 4) -> RetrievalResult:
         pdfs = self._match_documents(query)
-        self._build_index(pdfs)
+        signature, meta = self._index_signature(pdfs)
+        if self._current_index_key != signature:
+            loaded = self._load_index(signature)
+            if not loaded:
+                self._build_index(pdfs)
+                self._save_index(signature, meta)
+            self._current_index_key = signature
         if not self._retriever:
             return RetrievalResult(chunks=[])
         chunks = self._retriever.retrieve(query, top_k=top_k)
@@ -140,9 +227,13 @@ class KnowledgeBase:
         if not settings.ANTHROPIC_AUTH_TOKEN or not settings.ANTHROPIC_BASE_URL:
             return ""
 
-        url = settings.ANTHROPIC_BASE_URL.rstrip("/") + "/v1/messages"
+        base_url = settings.ANTHROPIC_BASE_URL.rstrip("/")
+        if base_url.endswith("/v1/messages"):
+            url = base_url
+        else:
+            url = base_url + "/v1/messages"
         headers = {
-            "x-api-key": settings.ANTHROPIC_AUTH_TOKEN,
+            "Authorization": f"Bearer {settings.ANTHROPIC_AUTH_TOKEN}",
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
@@ -159,6 +250,8 @@ class KnowledgeBase:
                 resp = await client.post(url, headers=headers, json=payload)
                 resp.raise_for_status()
                 data = resp.json()
+                if data.get("choices"):
+                    return data["choices"][0].get("message", {}).get("content", "")
                 if "content" in data and data["content"]:
                     return data["content"][0].get("text", "")
             except Exception:

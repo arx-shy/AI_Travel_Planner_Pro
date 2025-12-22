@@ -26,3 +26,10 @@ class BaseModel(Base):
         onupdate=func.now(),
         nullable=False
     )
+
+
+# Import models so SQLAlchemy registers them in Base.metadata.
+from app.modules.users.models import User, UserSettings, Subscription  # noqa: F401,E402
+from app.modules.planner.models.itinerary import Itinerary, DayDetail  # noqa: F401,E402
+from app.modules.qa.models import Conversation, Message  # noqa: F401,E402
+from app.modules.copywriter.models import Content  # noqa: F401,E402

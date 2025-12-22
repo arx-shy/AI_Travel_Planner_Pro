@@ -4,7 +4,7 @@ Plan Schemas
 This module contains Pydantic models for travel plan data.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -42,9 +42,10 @@ class DayDetail(BaseModel):
     Schema for daily itinerary detail.
     """
     day_number: int
-    date: Optional[datetime]
+    date: Optional[str]
     title: Optional[str]
     activities: List[dict] = []
+    notes: Optional[str] = None
 
 
 class PlanResponse(PlanBase):
@@ -59,5 +60,4 @@ class PlanResponse(PlanBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

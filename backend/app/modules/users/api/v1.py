@@ -86,6 +86,16 @@ async def login(
     )
 
 
+@router.post("/logout")
+async def logout(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Logout current user (stateless).
+    """
+    return {"message": "Logged out successfully"}
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: User = Depends(get_current_user)

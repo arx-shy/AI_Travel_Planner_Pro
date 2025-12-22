@@ -30,14 +30,21 @@ class BM25VectorStore:
     Minimal BM25 implementation for chunk retrieval.
     """
 
-    def __init__(self, chunks: Iterable[Chunk], k1: float = 1.5, b: float = 0.75):
+    def __init__(
+        self,
+        chunks: Iterable[Chunk],
+        k1: float = 1.5,
+        b: float = 0.75,
+        build_index: bool = True
+    ):
         self.chunks = list(chunks)
         self.k1 = k1
         self.b = b
         self._doc_tokens: List[List[str]] = []
         self._doc_freq: Dict[str, int] = {}
         self._avg_doc_len = 0.0
-        self._build_index()
+        if build_index:
+            self._build_index()
 
     def _build_index(self) -> None:
         total_len = 0
@@ -79,3 +86,38 @@ class BM25VectorStore:
         scores.sort(key=lambda item: item[1], reverse=True)
         results = [(self.chunks[idx], score) for idx, score in scores[:top_k]]
         return results
+
+    def to_state(self) -> Dict[str, object]:
+        return {
+            "chunks": [
+                {
+                    "chunk_id": chunk.chunk_id,
+                    "content": chunk.content,
+                    "source": chunk.source,
+                    "page": chunk.page,
+                }
+                for chunk in self.chunks
+            ],
+            "doc_tokens": self._doc_tokens,
+            "doc_freq": self._doc_freq,
+            "avg_doc_len": self._avg_doc_len,
+            "k1": self.k1,
+            "b": self.b,
+        }
+
+    @classmethod
+    def from_state(cls, state: Dict[str, object]) -> "BM25VectorStore":
+        chunks = [
+            Chunk(
+                chunk_id=item["chunk_id"],
+                content=item["content"],
+                source=item["source"],
+                page=item["page"],
+            )
+            for item in state.get("chunks", [])
+        ]
+        store = cls(chunks, k1=state.get("k1", 1.5), b=state.get("b", 0.75), build_index=False)
+        store._doc_tokens = state.get("doc_tokens", [])
+        store._doc_freq = state.get("doc_freq", {})
+        store._avg_doc_len = state.get("avg_doc_len", 0.0)
+        return store

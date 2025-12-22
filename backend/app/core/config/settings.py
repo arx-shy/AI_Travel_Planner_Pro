@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     ANTHROPIC_BASE_URL: Optional[str] = None
     ANTHROPIC_AUTH_TOKEN: Optional[str] = None
     ANTHROPIC_MODEL: Optional[str] = None
+    ANTHROPIC_SMALL_FAST_MODEL: Optional[str] = None
+    ANTHROPIC_DEFAULT_SONNET_MODEL: Optional[str] = None
+    ANTHROPIC_DEFAULT_OPUS_MODEL: Optional[str] = None
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: Optional[str] = None
     API_TIMEOUT_MS: int = 60000
 
     # Third-party Services
