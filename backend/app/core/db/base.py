@@ -28,8 +28,13 @@ class BaseModel(Base):
     )
 
 
-# Import models so SQLAlchemy registers them in Base.metadata.
-from app.modules.users.models import User, UserSettings, Subscription  # noqa: F401,E402
-from app.modules.planner.models.itinerary import Itinerary, DayDetail  # noqa: F401,E402
-from app.modules.qa.models import Conversation, Message  # noqa: F401,E402
-from app.modules.copywriter.models import Content  # noqa: F401,E402
+def import_all_models():
+    """
+    Import all models to register them with SQLAlchemy Base.
+    This should be called during application startup.
+    """
+    # Import models so SQLAlchemy registers them in Base.metadata
+    from app.modules.users.models import User, UserSettings, Subscription  # noqa: F401,E402
+    from app.modules.planner.models.itinerary import Itinerary, DayDetail  # noqa: F401,E402
+    from app.modules.qa.models import Conversation, Message  # noqa: F401,E402
+    from app.modules.copywriter.models import Content  # noqa: F401,E402

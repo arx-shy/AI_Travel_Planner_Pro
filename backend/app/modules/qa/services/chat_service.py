@@ -11,7 +11,7 @@ from app.modules.qa.daos.message_dao import MessageDAO
 from app.modules.qa.models.conversation import Conversation
 from app.modules.qa.models.message import Message
 from app.modules.qa.schemas.chat_schema import ChatCreate, ChatFeatures, MessageCreate
-from app.modules.qa.rag.knowledge_base import get_knowledge_base
+from app.modules.qa.agents.qa_agent import QAAgent
 
 
 class ChatService:
@@ -19,6 +19,18 @@ class ChatService:
         self.db = db
         self.conversation_dao = ConversationDAO(db)
         self.message_dao = MessageDAO(db)
+        self._agent: Optional[QAAgent] = None
+
+    def _get_agent(self, use_rag: bool = True) -> QAAgent:
+        """Get or create QA agent"""
+        if self._agent is None:
+            self._agent = QAAgent(
+                provider="openai",
+                temperature=0.7,
+                enable_rag=use_rag,
+                top_k=4
+            )
+        return self._agent
 
     async def create_session(self, user_id: int, data: ChatCreate) -> Conversation:
         features_json = None
@@ -87,7 +99,21 @@ class ChatService:
         )
         await self.message_dao.create(user_message)
 
-        assistant_content = await self._build_response(session.features_json, data.content)
+        features = self.parse_features(session.features_json)
+        use_rag = features.knowledge_base if features else True
+        agent = self._get_agent(use_rag=use_rag)
+        
+        history_messages = await self.message_dao.list_by_conversation(
+            conversation_id=session.id,
+            offset=0,
+            limit=10
+        )
+        history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in history_messages
+        ]
+        
+        assistant_content = await agent.chat_with_history(data.content, history, use_rag=use_rag)
         assistant_message = Message(
             conversation_id=session.id,
             role="assistant",
@@ -98,19 +124,9 @@ class ChatService:
 
     async def _build_response(self, features_json: Optional[str], content: str) -> str:
         features = self.parse_features(features_json)
-        knowledge_base = get_knowledge_base()
-        if features and features.knowledge_base:
-            return await knowledge_base.generate_answer(content)
-
-        response = await knowledge_base.generate_general_answer(content)
-        return response or (
-            f"我理解您的问题是：\"{content}\"。\n\n"
-            "我可以提供：\n"
-            "1) 行程规划建议\n"
-            "2) 天气与出行提示\n"
-            "3) 签证与政策说明\n"
-            "4) 美食与景点推荐\n"
-        )
+        use_rag = features.knowledge_base if features else True
+        agent = self._get_agent(use_rag=use_rag)
+        return await agent.chat(content, use_rag=use_rag)
 
     def parse_features(self, features_json: Optional[str]) -> Optional[ChatFeatures]:
         if not features_json:

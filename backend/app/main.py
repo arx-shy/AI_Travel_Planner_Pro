@@ -60,6 +60,11 @@ async def log_requests(request: Request, call_next):
 async def startup_event():
     """Initialize application on startup"""
     logger.info("Starting up WanderFlow backend...")
+    
+    # Import all models to register them with SQLAlchemy
+    from app.core.db.base import import_all_models
+    import_all_models()
+    
     await init_db()
     logger.info("Database initialized successfully")
 
