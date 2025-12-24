@@ -7,9 +7,10 @@ It supports multiple AI providers (OpenAI, Spark, GLM, etc.) through a unified i
 
 from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
-from langchain.schema import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from app.core.config.settings import settings
 import logging
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,10 @@ class LLMFactory:
         **kwargs
     ) -> ChatOpenAI:
         """
-        Create an LLM client based on the provider.
+        Create an LLM client based on provider.
 
         Args:
-            provider: AI provider name (openai, spark, glm, etc.)
+            provider: AI provider name (openai, glm, anthropic, etc.)
             model_name: Model name (uses default if not provided)
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens to generate
@@ -44,11 +45,21 @@ class LLMFactory:
         Raises:
             ValueError: If provider is not supported
         """
-        if provider.lower() == "openai":
+        provider = provider.lower()
+
+        if provider in ["openai", "glm", "anthropic"]:
+            # 选择正确的模型名称
+            if provider in ["glm", "anthropic"]:
+                # GLM 默认使用 glm-4.7
+                selected_model = model_name or "glm-4.7"
+            else:
+                selected_model = model_name or settings.OPENAI_MODEL_NAME
+
             return LLMFactory._create_openai_client(
-                model_name or settings.OPENAI_MODEL_NAME,
-                temperature,
-                max_tokens,
+                provider=provider,
+                model_name=selected_model,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 **kwargs
             )
         else:
@@ -56,23 +67,48 @@ class LLMFactory:
 
     @staticmethod
     def _create_openai_client(
-        model_name: str,
-        temperature: float,
-        max_tokens: Optional[int],
+        provider: str = "openai",
+        model_name: str = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
         **kwargs
     ) -> ChatOpenAI:
-        """Create OpenAI client"""
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY is not configured")
+        """Create OpenAI-compatible client (supports OpenAI, GLM, etc.)"""
 
-        return ChatOpenAI(
-            api_key=settings.OPENAI_API_KEY,
-            model_name=model_name,
-            temperature=temperature,
-            max_tokens=max_tokens or settings.AI_MAX_TOKENS,
-            base_url=settings.OPENAI_BASE_URL,
-            **kwargs
-        )
+        # 根据 provider 选择正确的配置
+        if provider in ["glm", "anthropic"]:
+            # 使用 ANTHROPIC 配置 (GLM-4.7)
+            api_key = settings.ANTHROPIC_AUTH_TOKEN
+
+            if not api_key:
+                raise ValueError("ANTHROPIC_AUTH_TOKEN is not configured for GLM")
+
+            # 智谱 GLM-4.7 使用新的端点 (Anthropic 兼容格式)
+            return ChatOpenAI(
+                api_key=api_key,
+                model_name=model_name,
+                temperature=temperature,
+                max_tokens=max_tokens or settings.AI_MAX_TOKENS,
+                base_url="https://open.bigmodel.cn/api/anthropic/v1/messages",
+                **kwargs
+            )
+
+        else:
+            # 使用 OpenAI 配置
+            api_key = settings.OPENAI_API_KEY
+            base_url = settings.OPENAI_BASE_URL
+
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY is not configured")
+
+            return ChatOpenAI(
+                api_key=api_key,
+                model_name=model_name,
+                temperature=temperature,
+                max_tokens=max_tokens or settings.AI_MAX_TOKENS,
+                base_url=base_url,
+                **kwargs
+            )
 
     @staticmethod
     async def agenerate(
@@ -92,8 +128,94 @@ class LLMFactory:
             Generated text response
         """
         try:
+            # 检查是否是智谱 API（通过检查 openai_api_base）
+            openai_api_base = getattr(client, 'openai_api_base', None)
+
+            if openai_api_base and 'open.bigmodel.cn/api/anthropic' in openai_api_base:
+                # 使用智谱 API 的 Anthropic 兼容格式
+                return await LLMFactory._generate_with_glm_anthropic(messages, client)
+
+            # 默认使用 LangChain 的调用
             response = await client.ainvoke(messages, **kwargs)
             return response.content
         except Exception as e:
             logger.error(f"LLM generation error: {str(e)}")
             raise
+
+    @staticmethod
+    async def _generate_with_glm_anthropic(messages: list[BaseMessage], client: ChatOpenAI) -> str:
+        """使用智谱 Anthropic 兼容格式生成响应"""
+        # 获取 API key（处理 SecretStr 类型）
+        api_key = client.openai_api_key
+        if hasattr(api_key, 'get_secret_value'):
+            api_key = api_key.get_secret_value()
+
+        # 转换消息格式
+        api_messages = []
+        system_message = None
+
+        for msg in messages:
+            # 获取消息类型
+            msg_type = msg.type if hasattr(msg, 'type') else msg.__class__.__name__.lower().replace('message', '')
+            content = msg.content
+
+            # 智谱 API 不支持 system 消息，需要提取系统提示
+            if msg_type == 'system':
+                system_message = content
+                continue
+
+            # 转换消息类型：human -> user
+            if msg_type == 'human':
+                role = 'user'
+            elif msg_type == 'ai':
+                role = 'assistant'
+            else:
+                role = msg_type
+
+            # 处理不同类型的消息内容
+            if isinstance(content, str):
+                api_messages.append({'role': role, 'content': content})
+            elif isinstance(content, list):
+                # 处理多模态内容
+                for item in content:
+                    if isinstance(item, dict):
+                        api_messages.append({'role': role, 'content': item})
+                    else:
+                        api_messages.append({'role': role, 'content': str(item)})
+
+        # 如果有系统消息，添加到第一条用户消息中
+        if system_message and api_messages:
+            api_messages[0]['content'] = f"{system_message}\n\n{api_messages[0]['content']}"
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+        }
+
+        payload = {
+            'model': client.model_name,
+            'max_tokens': getattr(client, 'max_tokens', 1000),
+            'messages': api_messages
+        }
+
+        timeout = settings.API_TIMEOUT_MS / 1000 if settings.API_TIMEOUT_MS else 60
+        async with httpx.AsyncClient(timeout=timeout) as http_client:
+            response = await http_client.post(
+                "https://open.bigmodel.cn/api/anthropic/v1/messages",
+                headers=headers,
+                json=payload
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                # 处理 Anthropic 格式的响应
+                content_list = data.get('content', [])
+                text_content = []
+                for item in content_list:
+                    if item.get('type') == 'text':
+                        text_content.append(item.get('text', ''))
+                return ''.join(text_content)
+            else:
+                error_msg = response.text
+                raise Exception(f"GLM API error ({response.status_code}): {error_msg}")

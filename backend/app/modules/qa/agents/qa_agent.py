@@ -15,7 +15,7 @@ from app.modules.qa.prompts.qa_prompts import (
     create_rag_prompt,
     create_general_prompt
 )
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 import logging
 
 logger = logging.getLogger(__name__)
