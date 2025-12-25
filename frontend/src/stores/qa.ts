@@ -146,25 +146,37 @@ export const useQaStore = defineStore('qa', () => {
     }
   }
 
-  // 发送消息
+  // 发送消息（非流式版本，确保基本功能正常）
   const sendMessage = async (content: string, options?: QaFeatures) => {
     if (!content.trim()) return { success: false, error: '内容不能为空' }
 
+    console.log('===== sendMessage 开始 =====')
+    console.log('Content:', content)
+    console.log('Options:', options)
+    console.log('Token:', token.value)
+    console.log('CurrentSession:', currentSession.value)
+
     if (shouldCreateNewSession(options)) {
+      console.log('需要创建新会话...')
       const created = await createSession(undefined, options)
       if (!created.success) {
+        console.error('创建会话失败:', created)
         return created
       }
     }
 
     const targetSessionId = currentSession.value?.id
     if (!targetSessionId) {
+      console.error('会话ID不存在')
       return { success: false, error: '会话创建失败' }
     }
+
+    console.log('目标会话ID:', targetSessionId)
 
     isLoading.value = true
     isTyping.value = true
 
+    // 添加用户消息
     const userMessage: ChatMessage = {
       id: Date.now(),
       role: 'user',
@@ -174,34 +186,73 @@ export const useQaStore = defineStore('qa', () => {
       timestamp: new Date().toISOString()
     }
     messages.value.push(userMessage)
+    console.log('已添加用户消息, 当前消息数:', messages.value.length)
 
     try {
+      console.log('发送API请求...')
+
       const response = await api.post<any>('/qa/messages', {
         content,
         session_id: targetSessionId,
         message_type: 'text'
       })
-      console.log('Send message response:', response)
 
-      const messagePayload = response.data?.message
-      if (messagePayload) {
-        messages.value.push({
-          id: messagePayload.id,
-          role: messagePayload.role,
-          content: messagePayload.content,
-          session_id: messagePayload.session_id,
-          message_type: messagePayload.message_type,
-          created_at: messagePayload.created_at
-        })
+      console.log('===== API 响应 =====')
+      console.log('响应类型:', typeof response)
+      console.log('完整响应:', response)
+      console.log('响应keys:', Object.keys(response))
+
+      // 尝试不同的路径获取message
+      let messagePayload = null
+
+      if (response?.data?.message) {
+        messagePayload = response.data.message
+        console.log('✓ 从 response.data.message 获取')
+      } else if (response?.message) {
+        messagePayload = response.message
+        console.log('✓ 从 response.message 获取')
+      } else if (response?.data && typeof response.data === 'object') {
+        messagePayload = response.data
+        console.log('✓ 从 response.data 获取')
+      } else if (typeof response === 'object') {
+        messagePayload = response
+        console.log('✓ 从整个响应获取')
       }
 
+      console.log('解析后的messagePayload:', messagePayload)
+
+      if (messagePayload) {
+        const newMessage = {
+          id: messagePayload.id || Date.now(),
+          role: messagePayload.role || 'assistant',
+          content: messagePayload.content || '',
+          session_id: messagePayload.session_id || targetSessionId,
+          message_type: messagePayload.message_type || 'text',
+          created_at: messagePayload.created_at || new Date().toISOString()
+        }
+        messages.value.push(newMessage)
+        console.log('✓ 已添加助手消息')
+        console.log('消息总数:', messages.value.length)
+        console.log('助手消息内容:', newMessage.content.substring(0, 100))
+      } else {
+        console.error('✗ 未找到有效的消息payload')
+        console.error('完整响应:', JSON.stringify(response, null, 2))
+      }
+
+      console.log('===== sendMessage 完成 =====')
       return { success: true }
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error('===== 发送消息失败 =====')
+      console.error('错误类型:', error.constructor.name)
+      console.error('错误信息:', (error as any).message)
+      console.error('错误详情:', error)
+      console.error('API错误:', (error as any).response?.data)
+
       return { success: false, error: '发送消息失败' }
     } finally {
       isTyping.value = false
       isLoading.value = false
+      console.log('isLoading 和 isTyping 已重置为 false')
     }
   }
 

@@ -8,7 +8,13 @@
       <div class="max-w-5xl mx-auto space-y-8">
         <h2 class="text-2xl font-bold text-slate-800">账户与设置</h2>
 
-        <UserProfile />
+        <UserProfile
+          :user-name="user?.name || ''"
+          :email="user?.email || ''"
+          :membership="membership"
+          :level="level"
+          :avatar-url="avatarUrl"
+        />
 
         <div class="grid md:grid-cols-2 gap-6">
           <PreferenceSettings
@@ -20,11 +26,11 @@
             @update:darkMode="darkMode = $event"
           />
           <SecuritySettings />
-          <SubscriptionInfo />
+          <SubscriptionInfo :user="user" />
         </div>
 
         <div class="text-center pt-8">
-          <AppButton variant="ghost" size="sm" class="text-red-500 hover:text-red-600">
+          <AppButton variant="ghost" size="sm" class="text-red-500 hover:text-red-600" @click="handleLogout">
             退出登录
           </AppButton>
         </div>
@@ -34,15 +40,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import UserProfile from '@/components/settings/UserProfile.vue'
 import PreferenceSettings from '@/components/settings/PreferenceSettings.vue'
 import SecuritySettings from '@/components/settings/SecuritySettings.vue'
 import SubscriptionInfo from '@/components/settings/SubscriptionInfo.vue'
+import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
+const authStore = useAuthStore()
+const { user } = storeToRefs(authStore)
+
+// 用户偏好设置
 const language = ref('简体中文')
 const currency = ref('CNY (￥)')
 const darkMode = ref(false)
+
+// 计算属性
+const membership = computed(() => {
+  if (!user.value) return '免费会员'
+  const levels: Record<string, string> = {
+    'free': '免费会员',
+    'basic': '基础会员',
+    'pro': 'Pro 会员',
+    'premium': '高级会员'
+  }
+  return levels[user.value.membership_level] || '免费会员'
+})
+
+const level = computed(() => {
+  if (!user.value) return 'Lv.1 新手'
+  return 'Lv.5 旅行家'
+})
+
+const avatarUrl = computed(() => {
+  if (user.value) {
+    return `https://i.pravatar.cc/150?u=${user.value.id}`
+  }
+  return 'https://i.pravatar.cc/150?img=12'
+})
+
+// 退出登录
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 </script>

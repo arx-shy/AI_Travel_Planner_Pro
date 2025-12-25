@@ -11,6 +11,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from app.core.config.settings import settings
 import logging
 import httpx
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -335,3 +336,201 @@ class LLMFactory:
             else:
                 error_msg = response.text
                 raise Exception(f"MiniMax API error ({response.status_code}): {error_msg}")
+
+    @staticmethod
+    async def astream_generate(
+        client: ChatOpenAI,
+        messages: list[BaseMessage],
+        **kwargs
+    ):
+        """
+        Asynchronously stream generated response from LLM.
+
+        Args:
+            client: Configured LLM client
+            messages: List of chat messages
+            **kwargs: Additional generation parameters
+
+        Yields:
+            Chunks of generated text
+        """
+        try:
+            # 检查是否是智谱或MiniMax API
+            openai_api_base = getattr(client, 'openai_api_base', None)
+
+            if openai_api_base and 'minimaxi.com/anthropic' in openai_api_base:
+                # 使用MiniMax流式生成
+                async for chunk in LLMFactory._astream_with_minimax(client, messages):
+                    yield chunk
+            elif openai_api_base and 'open.bigmodel.cn/api/anthropic' in openai_api_base:
+                # 使用GLM流式生成
+                async for chunk in LLMFactory._astream_with_glm(client, messages):
+                    yield chunk
+            else:
+                # 使用LangChain的流式生成
+                async for chunk in client.astream(messages, **kwargs):
+                    if hasattr(chunk, 'content'):
+                        yield chunk.content
+                    else:
+                        yield str(chunk)
+        except Exception as e:
+            logger.error(f"LLM streaming error: {str(e)}")
+            raise
+
+    @staticmethod
+    async def _astream_with_minimax(client: ChatOpenAI, messages: list[BaseMessage]):
+        """使用MiniMax流式生成"""
+        import httpx
+
+        api_key = client.openai_api_key
+        if hasattr(api_key, 'get_secret_value'):
+            api_key = api_key.get_secret_value()
+
+        # 转换消息格式
+        api_messages = []
+        for msg in messages:
+            msg_type = msg.type if hasattr(msg, 'type') else msg.__class__.__name__.lower().replace('message', '')
+            content = msg.content
+
+            if msg_type == 'system':
+                continue
+
+            if msg_type == 'human':
+                role = 'user'
+            elif msg_type == 'ai':
+                role = 'assistant'
+            else:
+                role = msg_type
+
+            if isinstance(content, str):
+                api_messages.append({'role': role, 'content': content})
+            elif isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        api_messages.append({'role': role, 'content': item})
+                    else:
+                        api_messages.append({'role': role, 'content': str(item)})
+
+        # 获取base_url
+        base_url = getattr(client, 'openai_api_base', None)
+        if base_url and '/anthropic/v1/messages' not in base_url:
+            if base_url.endswith('/anthropic'):
+                base_url = base_url + '/v1/messages'
+            else:
+                base_url = base_url + '/anthropic/v1/messages'
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+        }
+
+        payload = {
+            'model': client.model_name,
+            'max_tokens': getattr(client, 'max_tokens', 1000),
+            'messages': api_messages,
+            'stream': True
+        }
+
+        timeout = 60
+        async with httpx.AsyncClient(timeout=timeout) as http_client:
+            async with http_client.stream('POST', base_url, headers=headers, json=payload) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    raise Exception(f"MiniMax API error ({response.status_code}): {error_text}")
+
+                async for line in response.aiter_lines():
+                    if line.startswith('data: '):
+                        data_str = line[6:]
+                        if data_str.strip() == '[DONE]':
+                            break
+
+                        try:
+                            data = json.loads(data_str)
+                            # 处理不同格式的流式响应
+                            if 'delta' in data:
+                                # OpenAI格式
+                                delta = data['delta']
+                                if isinstance(delta, dict):
+                                    content = delta.get('content', '')
+                                else:
+                                    content = str(delta)
+                                yield content
+                            elif 'content' in data:
+                                # 直接格式
+                                content = data.get('content', '')
+                                yield content
+                        except json.JSONDecodeError:
+                            continue
+
+    @staticmethod
+    async def _astream_with_glm(client: ChatOpenAI, messages: list[BaseMessage]):
+        """使用GLM流式生成"""
+        import httpx
+
+        api_key = client.openai_api_key
+        if hasattr(api_key, 'get_secret_value'):
+            api_key = api_key.get_secret_value()
+
+        # 转换消息格式（与MiniMax类似）
+        api_messages = []
+        for msg in messages:
+            msg_type = msg.type if hasattr(msg, 'type') else msg.__class__.__name__.lower().replace('message', '')
+            content = msg.content
+
+            if msg_type == 'system':
+                continue
+
+            if msg_type == 'human':
+                role = 'user'
+            elif msg_type == 'ai':
+                role = 'assistant'
+            else:
+                role = msg_type
+
+            if isinstance(content, str):
+                api_messages.append({'role': role, 'content': content})
+            elif isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        api_messages.append({'role': role, 'content': item})
+                    else:
+                        api_messages.append({'role': role, 'content': str(item)})
+
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+        }
+
+        payload = {
+            'model': client.model_name,
+            'max_tokens': getattr(client, 'max_tokens', 1000),
+            'messages': api_messages,
+            'stream': True
+        }
+
+        timeout = 60
+        async with httpx.AsyncClient(timeout=timeout) as http_client:
+            async with http_client.stream('POST', 'https://open.bigmodel.cn/api/anthropic/v1/messages', headers=headers, json=payload) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    raise Exception(f"GLM API error ({response.status_code}): {error_text}")
+
+                async for line in response.aiter_lines():
+                    if line.startswith('data: '):
+                        data_str = line[6:]
+                        if data_str.strip() == '[DONE]':
+                            break
+
+                        try:
+                            data = json.loads(data_str)
+                            if 'delta' in data:
+                                delta = data['delta']
+                                if isinstance(delta, dict):
+                                    content = delta.get('content', '')
+                                else:
+                                    content = str(delta)
+                                yield content
+                        except json.JSONDecodeError:
+                            continue

@@ -102,7 +102,7 @@ class ChatService:
         features = self.parse_features(session.features_json)
         use_rag = features.knowledge_base if features else True
         agent = self._get_agent(use_rag=use_rag)
-        
+
         history_messages = await self.message_dao.list_by_conversation(
             conversation_id=session.id,
             offset=0,
@@ -112,7 +112,7 @@ class ChatService:
             {"role": msg.role, "content": msg.content}
             for msg in history_messages
         ]
-        
+
         assistant_content = await agent.chat_with_history(data.content, history, use_rag=use_rag)
         assistant_message = Message(
             conversation_id=session.id,
@@ -121,6 +121,24 @@ class ChatService:
             message_type="text"
         )
         return await self.message_dao.create(assistant_message)
+
+    def _user_message_constructor(self, content: str, message_type: str, conversation_id: int) -> Message:
+        """创建用户消息对象（用于流式接口）"""
+        return Message(
+            conversation_id=conversation_id,
+            role="user",
+            content=content,
+            message_type=message_type
+        )
+
+    def _assistant_message_constructor(self, content: str, conversation_id: int) -> Message:
+        """创建助手消息对象（用于流式接口）"""
+        return Message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=content,
+            message_type="text"
+        )
 
     async def _build_response(self, features_json: Optional[str], content: str) -> str:
         features = self.parse_features(features_json)

@@ -19,9 +19,6 @@
           <AppButton variant="secondary" size="lg" icon="play-circle">
             观看演示
           </AppButton>
-          <AppButton variant="secondary" size="lg" icon="user-check" @click="handleGuestLogin">
-            游客体验
-          </AppButton>
         </div>
 
         <div class="mt-10 flex items-center gap-4">
@@ -74,24 +71,8 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import AppButton from '@/components/common/AppButton.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
-
-const router = useRouter()
-const authStore = useAuthStore()
-
-const handleGuestLogin = async () => {
-  const result = await authStore.login({
-    email: 'guest@wanderflow.app',
-    password: 'guest'
-  })
-
-  if (result.success) {
-    router.push('/planner')
-  }
-}
 </script>
 
 <style scoped>

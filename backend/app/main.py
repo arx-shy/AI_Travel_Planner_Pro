@@ -1,7 +1,7 @@
 """
 WanderFlow AI Travel Assistant - FastAPI Application Entry Point
 
-This is the main entry point for the WanderFlow backend application.
+This is the main entry point for WanderFlow backend application.
 It sets up the FastAPI app, configures middleware, and registers all API routes.
 """
 
@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 import logging
+import sys
 
 from app.core.config import settings
 from app.core.db.session import init_db
@@ -19,10 +20,35 @@ from app.modules.planner.api.v1 import router as planner_router
 from app.modules.qa.api.v1 import router as qa_router
 from app.modules.copywriter.api.v1 import router as copywriter_router
 
-# Configure logging
+# 设置stdout和stderr的编码为UTF-8
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+# Configure logging with UTF-8 encoding
 logging.basicConfig(
     level=settings.LOG_LEVEL,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True
+)
+logger = logging.getLogger(__name__)
+
+# 配置SQLAlchemy的日志，避免编码问题
+sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+sqlalchemy_logger.propagate = False
+sqlalchemy_logger.addHandler(logging.StreamHandler(sys.stdout))
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    description="AI-powered travel planning assistant",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
 )
 logger = logging.getLogger(__name__)
 

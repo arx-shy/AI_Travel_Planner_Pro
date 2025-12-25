@@ -207,3 +207,49 @@ class QAAgent:
             raise Exception("LLM returned empty response. Please try again.")
 
         return response
+
+    async def chat_stream(
+        self,
+        query: str,
+        history: List[Dict[str, str]],
+        use_rag: bool = True
+    ):
+        """
+        Chat with conversation history support using streaming.
+
+        Args:
+            query: Current user query
+            history: Conversation history (list of messages with role and content)
+            use_rag: Whether to use RAG retrieval
+
+        Yields:
+            Chunks of generated response
+
+        Raises:
+            Exception: When LLM is not available or generation fails
+        """
+        if self.llm_client is None:
+            raise Exception("LLM client is not initialized. Please check API configuration.")
+
+        messages = []
+
+        if use_rag:
+            context_chunks = self._retrieve_context(query)
+            if context_chunks:
+                context = "\n\n".join([
+                    f"[来源: {c['source']} 第{c['page']}页\n{c['content']}"
+                        for c in context_chunks
+                    ])
+                messages.append(HumanMessage(content=f"参考资料：\n{context}"))
+
+        for msg in history[-10:]:
+            if msg['role'] == 'user':
+                messages.append(HumanMessage(content=msg['content']))
+            elif msg['role'] == 'assistant':
+                messages.append(SystemMessage(content=msg['content']))
+
+        messages.append(HumanMessage(content=query))
+
+        # 使用流式生成
+        async for chunk in LLMFactory.astream_generate(self.llm_client, messages):
+            yield chunk
