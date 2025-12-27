@@ -1,24 +1,74 @@
 """
 Travel Planner API Routes (v1)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
 from app.core.security.deps import get_current_user
 from app.modules.planner.schemas.plan_schema import PlanCreate, PlanUpdate, PlanResponse
-from app.modules.planner.services.plan_service import PlanService
 
 router = APIRouter()
+
+
+class GenerateDetailRequest(BaseModel):
+    use_strict_json: bool = Field(True, description="是否使用严格JSON格式")
+
+
+class OptimizeRequest(BaseModel):
+    feedback: str = Field(..., min_length=1, max_length=1000, description="用户反馈")
+    affected_days: list[int] = Field(default_factory=list, description="需要优化的天数列表")
+    use_strict_json: bool = Field(True, description="是否使用严格JSON格式")
+
 
 @router.post("/generate", response_model=PlanResponse, status_code=status.HTTP_201_CREATED)
 async def generate_itinerary(
     itinerary_data: PlanCreate,
+    use_strict_json: bool = True,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    """创建基础行程（仅信息，不含详细日程）"""
     plan_service = PlanService(db)
-    itinerary = await plan_service.generate_itinerary(user_id=current_user.id, itinerary_data=itinerary_data)
+    itinerary = await plan_service.generate_itinerary(current_user.id, itinerary_data, use_strict_json)
     return itinerary
+
+
+@router.post("/itineraries/{itinerary_id}/generate-detail", response_model=PlanResponse)
+async def generate_detailed_itinerary(
+    itinerary_id: int,
+    request: GenerateDetailRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """生成详细行程（包含每日活动安排）"""
+    plan_service = PlanService(db)
+    itinerary = await plan_service.generate_detailed_itinerary(
+        current_user.id, 
+        itinerary_id, 
+        request.use_strict_json
+    )
+    return itinerary
+
+
+@router.post("/itineraries/{itinerary_id}/optimize", response_model=PlanResponse)
+async def optimize_itinerary(
+    itinerary_id: int,
+    feedback: OptimizeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """根据用户反馈优化行程"""
+    plan_service = PlanService(db)
+    itinerary = await plan_service.optimize_itinerary(
+        current_user.id,
+        itinerary_id,
+        feedback.feedback,
+        feedback.affected_days,
+        feedback.use_strict_json
+    )
+    return itinerary
+
 
 @router.get("/itineraries", response_model=list[PlanResponse])
 async def get_my_itineraries(
@@ -27,9 +77,11 @@ async def get_my_itineraries(
     page: int = 1,
     size: int = 10
 ):
+    """获取我的行程列表"""
     plan_service = PlanService(db)
     itineraries = await plan_service.get_user_itineraries(user_id=current_user.id, page=page, size=size)
     return itineraries
+
 
 @router.get("/itineraries/{itinerary_id}", response_model=PlanResponse)
 async def get_itinerary(
@@ -37,11 +89,13 @@ async def get_itinerary(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    """获取行程详情"""
     plan_service = PlanService(db)
     itinerary = await plan_service.get_itinerary(itinerary_id=itinerary_id, user_id=current_user.id)
     if not itinerary:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
     return itinerary
+
 
 @router.put("/itineraries/{itinerary_id}", response_model=PlanResponse)
 async def update_itinerary(
@@ -50,11 +104,13 @@ async def update_itinerary(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    """更新行程基本信息"""
     plan_service = PlanService(db)
-    itinerary = await plan_service.update_itinerary(itinerary_id=itinerary_id, user_id=current_user.id, itinerary_data=itinerary_data)
+    itinerary = await plan_service.update_itinerary(itinerary_id=itinerary_id, user_id=current_user.id, itinerary_data=itinerary_data.model_dump(exclude_unset=True))
     if not itinerary:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
     return itinerary
+
 
 @router.delete("/itineraries/{itinerary_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_itinerary(
@@ -62,6 +118,7 @@ async def delete_itinerary(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    """删除行程"""
     plan_service = PlanService(db)
     success = await plan_service.delete_itinerary(itinerary_id=itinerary_id, user_id=current_user.id)
     if not success:

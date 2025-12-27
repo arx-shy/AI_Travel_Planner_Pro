@@ -19,6 +19,7 @@
     </div>
 
     <div v-if="loading" class="mt-4 text-center text-slate-500 text-sm">查询中...</div>
+    <div v-else-if="error" class="mt-4 text-center text-red-500 text-sm">{{ error }}</div>
 
     <div v-else-if="results.length" class="mt-4">
       <div class="grid grid-cols-3 gap-4 text-sm">
@@ -61,6 +62,7 @@ defineProps<{
   visible: boolean
   city: string
   loading: boolean
+  error: string
   results: WeatherItem[]
 }>()
 

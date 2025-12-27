@@ -9,6 +9,7 @@ from app.core.security.deps import get_current_active_user
 from app.common.dtos.base import ResponseDTO, PaginationDTO
 from app.modules.qa.schemas.chat_schema import ChatCreate, ChatResponse, MessageCreate, MessageResponse
 from app.modules.qa.services.chat_service import ChatService
+from app.modules.qa.tools.weather import query_weather as query_weather_tool
 import json
 import logging
 
@@ -242,8 +243,12 @@ async def query_weather(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    service = ChatService(db)
-    return ResponseDTO(data=service.mock_weather(city))
+    try:
+        return ResponseDTO(data=await query_weather_tool(city))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
 
 @router.post("/speech-to-text", response_model=ResponseDTO)

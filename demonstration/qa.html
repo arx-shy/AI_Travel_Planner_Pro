@@ -516,43 +516,51 @@
       weatherGrid.innerHTML = '<div class="col-span-3 text-center py-4 text-slate-500">查询中...</div>';
       weatherResult.classList.remove('hidden');
 
-      // 模拟天气 API 调用
-      setTimeout(() => {
-        const mockWeather = generateMockWeather(city);
-        weatherGrid.innerHTML = mockWeather;
-      }, 1000);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/v1/qa/weather/${encodeURIComponent(city)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `请求失败 (${response.status})`);
+        }
+        const payload = await response.json();
+        const data = payload.data || payload;
+        weatherGrid.innerHTML = renderWeather(data.city || city, data.forecast || []);
+      } catch (error) {
+        console.error('天气查询失败:', error);
+        weatherGrid.innerHTML = '<div class="col-span-3 text-center py-4 text-red-500">天气查询失败，请稍后再试</div>';
+      }
     }
 
-    function generateMockWeather(city) {
-      const weathers = ['☀️ 晴', '⛅ 多云', '🌧️ 雨', '⛈️ 雷阵雨', '🌫️ 雾'];
-      const randomWeather = weathers[Math.floor(Math.random() * weathers.length)];
+    function renderWeather(city, forecast) {
+      if (!forecast.length) {
+        return '<div class="col-span-3 text-center py-4 text-slate-500">暂无可用天气数据</div>';
+      }
 
       return `
         <div class="col-span-3 mb-4 text-center">
           <h4 class="text-lg font-bold text-slate-800">${city} - 未来3天天气预报</h4>
         </div>
-        ${Array.from({length: 3}).map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() + i);
-          const dateStr = date.toLocaleDateString('zh-CN', {month: 'short', day: 'numeric'});
-          const tempHigh = 15 + Math.floor(Math.random() * 15);
-          const tempLow = 5 + Math.floor(Math.random() * 10);
-          const weather = weathers[Math.floor(Math.random() * weathers.length)];
+        ${forecast.map((item) => {
+          const dateStr = formatDate(item.date);
+          const meta = mapWeather(item);
 
           return `
             <div class="bg-white p-4 rounded-xl border border-slate-200">
               <div class="text-center">
                 <div class="text-sm font-semibold text-slate-600">${dateStr}</div>
-                <div class="text-3xl my-2">${weather}</div>
-                <div class="text-xs text-slate-500">${getWeatherDesc(weather)}</div>
+                <div class="text-3xl my-2">${meta.icon}</div>
+                <div class="text-xs text-slate-500">${meta.desc}</div>
                 <div class="mt-3 flex justify-between text-sm">
-                  <span class="text-red-500 font-semibold">${tempHigh}°</span>
+                  <span class="text-red-500 font-semibold">${item.temp_high}°</span>
                   <span class="text-slate-400">/</span>
-                  <span class="text-blue-500 font-semibold">${tempLow}°</span>
+                  <span class="text-blue-500 font-semibold">${item.temp_low}°</span>
                 </div>
                 <div class="mt-2 text-xs text-slate-500">
-                  <div>💧 湿度: ${50 + Math.floor(Math.random() * 30)}%</div>
-                  <div>🌬️ 风: ${Math.floor(Math.random() * 5)}级</div>
+                  <div>湿度: ${item.humidity}%</div>
+                  <div>风: ${item.wind}级</div>
                 </div>
               </div>
             </div>
@@ -561,15 +569,49 @@
       `;
     }
 
-    function getWeatherDesc(weather) {
-      const descs = {
-        '☀️ 晴': '阳光明媚，适合出行',
-        '⛅ 多云': '天气舒适，注意防晒',
-        '🌧️ 雨': '记得带伞，注意防滑',
-        '⛈️ 雷阵雨': '注意安全，室内活动',
-        '🌫️ 雾': '能见度低，注意出行安全'
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      if (Number.isNaN(date.getTime())) return dateStr;
+      return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    }
+
+    function mapWeather(item) {
+      const code = Number(item.weather_code);
+      const desc = item.weather || '未知';
+      const iconMap = {
+        0: '☀️',
+        1: '⛅',
+        2: '⛅',
+        3: '☁️',
+        45: '🌫️',
+        48: '🌫️',
+        51: '🌦️',
+        53: '🌦️',
+        55: '🌧️',
+        56: '🌧️',
+        57: '🌧️',
+        61: '🌧️',
+        63: '🌧️',
+        65: '🌧️',
+        66: '🌧️',
+        67: '🌧️',
+        71: '❄️',
+        73: '❄️',
+        75: '❄️',
+        77: '❄️',
+        80: '🌦️',
+        81: '🌦️',
+        82: '⛈️',
+        85: '❄️',
+        86: '❄️',
+        95: '⛈️',
+        96: '⛈️',
+        99: '⛈️'
       };
-      return descs[weather] || '出行请注意安全';
+      return {
+        icon: iconMap[code] || '☁️',
+        desc
+      };
     }
 
     async function toggleRecording() {

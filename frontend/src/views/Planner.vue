@@ -26,12 +26,12 @@
               :destination="destination"
               :days="days"
               :budget="budget"
-              :travel-style="travelStyle"
+              :travelStyle="travelStyle"
               @update:destination="destination = $event"
               @update:days="days = $event"
               @update:budget="budget = $event"
               @update:travelStyle="travelStyle = $event"
-              @generate="generateItinerary"
+              @generate="handleGenerate"
             />
 
             <InspirationCard class="fade-in-up" />
@@ -40,7 +40,11 @@
           <div class="lg:col-span-2 flex flex-col gap-6">
             <MapPreview />
 
-            <ItineraryCard v-if="generatedItinerary" :itinerary="generatedItinerary" />
+            <ItineraryCard
+              v-if="currentItinerary"
+              :itinerary="currentItinerary"
+              @delete="handleDelete"
+            />
             <EmptyStateCard v-else />
           </div>
         </div>
@@ -74,25 +78,28 @@ const styleLabelMap: Record<string, string> = {
   foodie: '美食探索'
 }
 
-const generatedItinerary = computed(() => {
-  if (!currentItinerary.value) return null
-  return {
-    title: currentItinerary.value.title,
-    summary: '行程已生成，点击右上角导出或继续调整参数优化线路。',
-    destination: currentItinerary.value.destination,
-    days: currentItinerary.value.days,
-    budget: currentItinerary.value.budget,
-    styleLabel: styleLabelMap[currentItinerary.value.travel_style] || currentItinerary.value.travel_style
-  }
-})
+const handleGenerate = async () => {
+  console.log('开始生成行程:', {
+    destination: destination.value,
+    days: days.value,
+    budget: budget.value,
+    travelStyle: travelStyle.value
+  })
 
-const generateItinerary = async () => {
   await itineraryStore.createItinerary({
     title: `${destination.value} ${days.value}日游`,
     destination: destination.value,
     days: days.value,
     budget: budget.value,
-    travel_style: travelStyle.value as 'leisure' | 'adventure' | 'foodie'
+    travel_style: travelStyle.value as 'leisure' | 'adventure' | 'foodie',
+    use_strict_json: true
   })
 }
+
+  const handleDelete = async (id: number) => {
+    if (confirm('确定要删除这个行程吗？')) {
+      await itineraryStore.deleteItinerary(id)
+    }
+  }
 </script>
+

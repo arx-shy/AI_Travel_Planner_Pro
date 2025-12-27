@@ -95,6 +95,7 @@
             :visible="weatherEnabled"
             :city="weatherCity"
             :loading="weatherLoading"
+            :error="weatherError"
             :results="weatherResults"
             @update:city="weatherCity = $event"
             @query="queryWeather"
@@ -141,6 +142,7 @@ import QuickQuestions from '@/components/chat/QuickQuestions.vue'
 import WeatherPanel from '@/components/chat/WeatherPanel.vue'
 import VoicePanel from '@/components/chat/VoicePanel.vue'
 import { useQaStore } from '@/stores/qa'
+import api from '@/utils/api'
 
 interface WeatherItem {
   date: string
@@ -163,6 +165,7 @@ const voiceEnabled = ref(false)
 const weatherCity = ref('')
 const weatherLoading = ref(false)
 const weatherResults = ref<WeatherItem[]>([])
+const weatherError = ref('')
 
 const voiceRecording = ref(false)
 const voiceStatusText = ref('点击开始录音')
@@ -208,24 +211,91 @@ const queryWeather = () => {
   if (!weatherCity.value.trim()) return
   weatherLoading.value = true
   weatherResults.value = []
+  weatherError.value = ''
+  const city = weatherCity.value.trim()
 
-  setTimeout(() => {
-    const now = new Date()
-    weatherResults.value = Array.from({ length: 3 }).map((_, index) => {
-      const date = new Date(now)
-      date.setDate(now.getDate() + index)
-      return {
-        date: date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
-        icon: ['☀️', '⛅', '🌧️'][index % 3],
-        desc: ['阳光明媚', '多云转晴', '小雨'][index % 3],
-        high: 22 + index,
-        low: 12 + index,
-        humidity: 50 + index * 5,
-        wind: 2 + index
+  void (async () => {
+    try {
+      const response = await api.get<any>(`/qa/weather/${encodeURIComponent(city)}`)
+      const payload = response?.data ?? response
+      const forecast = payload?.forecast || []
+
+      if (!forecast.length) {
+        weatherError.value = '暂无可用天气数据'
+        return
       }
-    })
-    weatherLoading.value = false
-  }, 900)
+
+      const hasValidCodes = forecast.every((item: any) => Number.isFinite(Number(item.weather_code)))
+      if (!hasValidCodes) {
+        console.warn('天气接口返回的 weather_code 缺失，可能仍在使用演示数据:', forecast)
+        weatherError.value = '天气数据无效，请确认后端已更新为真实天气服务'
+        return
+      }
+
+      weatherResults.value = forecast.map((item: any) => {
+        const { icon, desc } = mapWeather(item)
+        return {
+          date: formatDate(item.date),
+          icon,
+          desc,
+          high: item.temp_high,
+          low: item.temp_low,
+          humidity: item.humidity,
+          wind: item.wind
+        }
+      })
+    } catch (error) {
+      console.error('天气查询失败:', error)
+      weatherError.value = '天气查询失败，请稍后再试'
+    } finally {
+      weatherLoading.value = false
+    }
+  })()
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+const mapWeather = (item: any) => {
+  const code = Number(item.weather_code)
+  const desc = item.weather || '未知'
+  const iconMap: Record<number, string> = {
+    0: '☀️',
+    1: '⛅',
+    2: '⛅',
+    3: '☁️',
+    45: '🌫️',
+    48: '🌫️',
+    51: '🌦️',
+    53: '🌦️',
+    55: '🌧️',
+    56: '🌧️',
+    57: '🌧️',
+    61: '🌧️',
+    63: '🌧️',
+    65: '🌧️',
+    66: '🌧️',
+    67: '🌧️',
+    71: '❄️',
+    73: '❄️',
+    75: '❄️',
+    77: '❄️',
+    80: '🌦️',
+    81: '🌦️',
+    82: '⛈️',
+    85: '❄️',
+    86: '❄️',
+    95: '⛈️',
+    96: '⛈️',
+    99: '⛈️'
+  }
+  return {
+    icon: iconMap[code] || '☁️',
+    desc
+  }
 }
 
 const startRecording = () => {

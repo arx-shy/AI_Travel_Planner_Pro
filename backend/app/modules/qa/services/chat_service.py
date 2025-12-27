@@ -2,8 +2,6 @@
 QA Chat Service
 """
 
-import json
-from datetime import datetime
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.qa.daos.conversation_dao import ConversationDAO
@@ -150,21 +148,6 @@ class ChatService:
         if not features_json:
             return None
         return ChatFeatures.model_validate_json(features_json)
-
-    def mock_weather(self, city: str) -> dict:
-        today = datetime.utcnow().date()
-        forecast = []
-        for index in range(3):
-            forecast.append({
-                "date": str(today),
-                "weather": ["晴", "多云", "小雨"][index % 3],
-                "temp_high": 26 + index,
-                "temp_low": 18 + index,
-                "humidity": 60 + index * 3,
-                "wind": "南风3级",
-                "uv_index": 5 + index
-            })
-        return {"city": city, "forecast": forecast}
 
     def mock_speech_to_text(self) -> dict:
         return {"text": "帮我查询一下北京的天气"}
