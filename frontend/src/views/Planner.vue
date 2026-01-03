@@ -15,7 +15,7 @@
     </AppSidebar>
 
     <main class="flex-1 flex flex-col relative overflow-hidden">
-      <PlannerHeader />
+      <PlannerHeader :itinerary="currentItinerary" />
 
       <!-- 未登录提示 -->
       <div v-if="!isAuthenticated" class="flex-1 flex items-center justify-center">

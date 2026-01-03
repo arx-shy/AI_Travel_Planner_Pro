@@ -124,3 +124,77 @@ async def delete_itinerary(
     success = await plan_service.delete_itinerary(itinerary_id=itinerary_id, user_id=current_user.id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
+
+
+@router.get("/itineraries/{itinerary_id}/export/pdf")
+async def export_itinerary_pdf(
+    itinerary_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """导出行程为 PDF"""
+    from app.modules.planner.services.pdf_service import PDFExportService
+    from fastapi.responses import Response
+    from sqlalchemy import select
+    from app.modules.planner.models.itinerary import Itinerary
+
+    # Query database model directly to get metadata_json
+    result = await db.execute(
+        select(Itinerary)
+        .where(Itinerary.id == itinerary_id)
+        .where(Itinerary.user_id == current_user.id)
+    )
+    itinerary = result.scalar_one_or_none()
+
+    if not itinerary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
+
+    # Get metadata from metadata_json
+    metadata = itinerary.metadata_json or {}
+
+    # Convert to dict for PDF service
+    itinerary_dict = {
+        "title": itinerary.title,
+        "destination": itinerary.destination,
+        "departure": itinerary.departure,
+        "days": itinerary.days,
+        "budget": float(itinerary.budget) if itinerary.budget else 0,
+        "travel_style": itinerary.travel_style,
+        "summary": metadata.get("summary", ""),
+        "highlights": metadata.get("highlights", []),
+        "best_season": metadata.get("best_season", ""),
+        "weather": metadata.get("weather", ""),
+        "actual_cost": metadata.get("actual_cost", 0),
+        "cost_breakdown": metadata.get("cost_breakdown", {}),
+        "days_detail": [
+            {
+                "day_number": day.day_number,
+                "title": day.title,
+                "date": day.date,
+                "summary": "",
+                "activities": day.activities if day.activities else [],
+                "total_cost": 0,
+            }
+            for day in itinerary.days_detail
+        ],
+        "preparation": metadata.get("preparation", {}),
+        "tips": metadata.get("tips", {}),
+    }
+
+    # Generate PDF
+    pdf_service = PDFExportService()
+    pdf_bytes = pdf_service.generate_itinerary_pdf(itinerary_dict)
+
+    # Return PDF file
+    # URL encode filename to support Chinese characters
+    from urllib.parse import quote
+    filename = f"{itinerary.title}.pdf"
+    encoded_filename = quote(filename, safe='')
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+        }
+    )
