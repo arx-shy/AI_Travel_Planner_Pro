@@ -75,8 +75,13 @@ class Settings(BaseSettings):
 
     # Third-party Services
     WEATHER_API_KEY: Optional[str] = None
+    WEATHER_API_ID: Optional[str] = None
+    MAP_API_KEY: Optional[str] = None
     FLIGHT_API_KEY: Optional[str] = None
     HOTEL_API_KEY: Optional[str] = None
+
+    # Claude Code Configuration
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: Optional[str] = None
 
     # Email Configuration
     SMTP_HOST: Optional[str] = None
@@ -91,7 +96,7 @@ class Settings(BaseSettings):
 
     # AI Model Settings
     AI_TEMPERATURE: float = 0.7
-    AI_MAX_TOKENS: int = 2000
+    AI_MAX_TOKENS: int = 16000  # 增加token限制以支持完整行程生成
     AI_TIMEOUT: int = 60
 
     # Rate Limiting

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
 from app.core.security.deps import get_current_user
 from app.modules.planner.schemas.plan_schema import PlanCreate, PlanUpdate, PlanResponse
+from app.modules.planner.services.plan_service import PlanService
 
 router = APIRouter()
 

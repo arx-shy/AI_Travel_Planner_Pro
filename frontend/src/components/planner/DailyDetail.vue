@@ -1,10 +1,22 @@
 <template>
   <div class="daily-detail glass-card p-6 mb-4">
-    <div class="flex items-center justify-between mb-4">
-      <h4 class="text-lg font-bold text-slate-800">
-        第{{ day.day_number }}天 - {{ day.title || '自由探索' }}
-      </h4>
-      <div class="flex gap-2">
+    <!-- 天数标题 -->
+    <div class="day-header">
+      <div class="day-badge">第{{ day.day_number }}天</div>
+      <div class="day-info">
+        <h4 class="day-title">{{ day.title || '自由探索' }}</h4>
+        <!-- 天数统计 -->
+        <div class="day-stats">
+          <span v-if="day.activities && day.activities.length" class="stat">
+            {{ day.activities.length }}个活动
+          </span>
+          <span v-if="day.total_cost" class="stat cost">
+            花费¥{{ day.total_cost }}
+          </span>
+        </div>
+      </div>
+      <!-- 操作按钮 -->
+      <div class="day-actions">
         <AppButton
           v-if="editable"
           size="sm"
@@ -17,41 +29,46 @@
       </div>
     </div>
 
-    <ActivityTimeline :activities="day.activities" />
+    <!-- 活动时间线 -->
+    <div class="activities-container">
+      <EditableActivityCard
+        v-for="(activity, index) in day.activities"
+        :key="index"
+        :activity="activity"
+        :editable="editable"
+        @update="handleActivityUpdate($event, index)"
+      />
+    </div>
 
-    <!-- 住宿和餐饮信息 -->
-    <div v-if="hasExtraInfo" class="info-grid mt-6">
-      <div v-if="accommodation" class="info-item">
-        <AppIcon name="bed" class="text-teal-500" />
-        <span class="label">住宿</span>
-        <span class="value">{{ accommodation }}</span>
-      </div>
-      <div v-if="meals && meals.length" class="info-item">
-        <AppIcon name="utensils" class="text-teal-500" />
-        <span class="label">餐饮</span>
-        <span class="value">{{ meals.join('、') }}</span>
+    <!-- 住宿信息（如果有） -->
+    <div v-if="day.accommodation" class="accommodation-box">
+      <AppIcon name="bed" class="text-purple-500" />
+      <div class="accommodation-info">
+        <div class="hotel-name">{{ day.accommodation.name }}</div>
+        <div class="hotel-address">{{ day.accommodation.address }}</div>
+        <div v-if="day.accommodation.rating" class="hotel-rating">
+          评分：{{ day.accommodation.rating }}/5
+        </div>
+        <div v-if="day.accommodation.booking_status" class="booking-status">
+          {{ day.accommodation.booking_status }}
+        </div>
       </div>
     </div>
 
     <!-- 备注 -->
-    <div v-if="day.notes" class="notes mt-4">
-      <AppIcon name="info-circle" class="text-blue-500" />
+    <div v-if="day.notes" class="notes-box">
+      <AppIcon name="info-circle" class="text-yellow-500" />
       <span>{{ day.notes }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import AppIcon from '@/components/common/AppIcon.vue'
-import ActivityTimeline from './ActivityTimeline.vue'
-
-interface DayPlan {
-  day_number: number
-  title: string
-  activities: any[]
-  notes?: string
-}
+import AppButton from '@/components/common/AppButton.vue'
+import EditableActivityCard from './EditableActivityCard.vue'
+import type { DayPlan } from '@/types/api'
+import type { Activity } from '@/types/api'
 
 interface Props {
   day: DayPlan
@@ -64,58 +81,146 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   edit: [number]
+  updateDay: [dayNumber: number, activities: Activity[]]
 }>()
 
-const accommodation = computed(() => {
-  const activities = props.day.activities || []
-  return activities.find(a => a.type === 'accommodation')?.title || null
-})
-
-const meals = computed(() => {
-  const activities = props.day.activities || []
-  return activities
-    .filter(a => a.type === 'meal')
-    .map(a => a.title)
-})
-
-const hasExtraInfo = computed(() => {
-  return Boolean(accommodation.value || (meals.value && meals.value.length > 0))
-})
+const handleActivityUpdate = (updatedActivity: Activity, index: number) => {
+  const updatedActivities = [...props.day.activities]
+  updatedActivities[index] = updatedActivity
+  emit('updateDay', props.day.day_number, updatedActivities)
+}
 </script>
 
 <style scoped>
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.day-header {
+  display: flex;
+  align-items: center;
   gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(226,232,240,0.8);
+  margin-bottom: 1rem;
 }
 
-.info-item {
+.day-badge {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-radius: 0.5rem;
+  justify-content: center;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  color: white;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
-.info-item .label {
-  font-weight: 600;
+.day-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.day-stats {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.day-stats .stat {
+  font-size: 0.8125rem;
   color: #64748b;
-  margin-right: 0.5rem;
 }
 
-.info-item .value {
-  color: #334155;
+.day-stats .stat.cost {
+  color: #16a34a;
+  font-weight: 600;
 }
 
-.notes {
-  padding: 0.75rem;
-  background: #fffbeb;
+.day-actions {
+  flex-shrink: 0;
+}
+
+.activities-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 住宿信息 */
+.accommodation-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+
+.accommodation-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
   border-radius: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.accommodation-info {
+  flex: 1;
+}
+
+.hotel-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #581c87;
+  margin-bottom: 0.25rem;
+}
+
+.hotel-address {
+  font-size: 0.8125rem;
+  color: #7c3aed;
+  margin-bottom: 0.25rem;
+}
+
+.hotel-rating {
+  font-size: 0.8125rem;
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+.booking-status {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: #ddd6fe;
+  color: #5b21b6;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* 备注 */
+.notes-box {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #854d0e;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #92400e;
+  line-height: 1.5;
 }
 </style>

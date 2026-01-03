@@ -24,7 +24,9 @@ config = context.config
 
 # Set database URL from environment
 from app.core.config.settings import settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Use synchronous driver (pymysql) for alembic migrations instead of async (aiomysql)
+sync_db_url = settings.DATABASE_URL.replace("+aiomysql", "+pymysql")
+config.set_main_option("sqlalchemy.url", sync_db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

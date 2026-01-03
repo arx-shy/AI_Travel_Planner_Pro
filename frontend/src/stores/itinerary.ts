@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import api from '@/utils/api'
+import api, { longRunningApi } from '@/utils/api'
 import type { Itinerary, ItineraryCreateRequest, DayPlan } from '@/types/api'
 
 export const useItineraryStore = defineStore('itinerary', () => {
@@ -77,7 +77,8 @@ export const useItineraryStore = defineStore('itinerary', () => {
   const generateDetailedItinerary = async (itineraryId: number, useStrictJson: boolean = true) => {
     isLoading.value = true
     try {
-      const response = await api.post<Itinerary>(
+      // 使用longRunningApi以支持更长的超时时间（AI生成可能需要30-60秒）
+      const response = await longRunningApi.post<Itinerary>(
         `/api/v1/planner/itineraries/${itineraryId}/generate-detail`,
         { use_strict_json: useStrictJson }
       )
@@ -96,7 +97,8 @@ export const useItineraryStore = defineStore('itinerary', () => {
   const optimizeItinerary = async (itineraryId: number, feedback: { feedback: string; affected_days?: number[] }) => {
     isLoading.value = true
     try {
-      const response = await api.post<Itinerary>(
+      // 使用longRunningApi以支持更长的超时时间（AI优化可能需要30-60秒）
+      const response = await longRunningApi.post<Itinerary>(
         `/api/v1/planner/itineraries/${itineraryId}/optimize`,
         {
           feedback: feedback.feedback,

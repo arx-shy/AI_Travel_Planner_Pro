@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     try {
       console.log('Login request:', credentials)
-      const response = await api.post<any>('/auth/login', credentials)
+      const response = await api.post<any>('/api/v1/auth/login', credentials)
       console.log('Login response:', response)
 
       // 直接从response中获取数据
@@ -52,7 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     try {
       console.log('Register request:', data)
-      const response = await api.post<any>('/auth/register', data)
+      const response = await api.post<any>('/api/v1/auth/register', data)
       console.log('Register response:', response)
 
       // 直接从response中获取数据
@@ -75,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
   // 登出
   const logout = async () => {
     try {
-      await api.post('/auth/logout')
+      await api.post('/api/v1/auth/logout')
     } catch (error) {
       console.warn('Logout request failed:', error)
     }
@@ -93,7 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value) return { success: false, error: '用户未登录' }
 
     try {
-      const response = await api.put<User>('/auth/me', data)
+      const response = await api.put<User>('/api/v1/auth/me', data)
       user.value = response
       localStorage.setItem('user', JSON.stringify(user.value))
 
