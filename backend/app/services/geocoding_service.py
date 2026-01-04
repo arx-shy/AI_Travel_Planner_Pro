@@ -1,29 +1,72 @@
 """
 高德地图地理编码服务
 提供地址解析、逆地理编码、路径规划等功能
+支持高德地图 API 安全密钥签名认证
 """
 
 import httpx
+import hashlib
+import logging
 from typing import Optional, Dict, Any, List
-from app.core.config import settings
-from app.core.logging import logger
+from urllib.parse import urlencode
+from app.core.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AMapGeocodingService:
-    """高德地图API服务"""
+    """高德地图API服务（支持安全密钥）"""
 
     BASE_URL = "https://restapi.amap.com"
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, secret_key: Optional[str] = None):
         """
         初始化高德地图服务
 
         Args:
             api_key: 高德地图API密钥，如果为None则从配置读取
+            secret_key: 高德地图安全密钥，如果为None则从配置读取
         """
-        self.api_key = api_key or settings.AMAP_API_KEY
+        self.api_key = api_key or settings.MAP_API_KEY
+        self.secret_key = secret_key or settings.MAP_SECRET_KEY
+
         if not self.api_key:
             logger.warning("高德地图API密钥未配置，地理编码功能将不可用")
+
+        if not self.secret_key:
+            logger.info("未配置安全密钥，将尝试不使用签名调用API")
+
+    def _generate_signature(self, params: Dict[str, str]) -> str:
+        """
+        生成高德地图 API 签名
+
+        Args:
+            params: 请求参数（不包含 key 和 sig）
+
+        Returns:
+            MD5 签名值
+        """
+        if not self.secret_key:
+            return ""
+
+        # 1. 对所有参数按字母顺序排序
+        sorted_params = sorted(params.items())
+
+        # 2. 拼接参数字符串
+        param_str = "&".join([f"{k}={v}" for k, v in sorted_params])
+
+        # 3. 在末尾加上安全密钥
+        sign_str = param_str + self.secret_key
+
+        # 4. 计算 MD5 哈希值
+        md5 = hashlib.md5()
+        md5.update(sign_str.encode('utf-8'))
+        signature = md5.hexdigest()
+
+        logger.debug(f"签名原文: {sign_str}")
+        logger.debug(f"签名结果: {signature}")
+
+        return signature
 
     async def geocode(self, address: str, city: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
@@ -50,17 +93,28 @@ class AMapGeocodingService:
         try:
             url = f"{self.BASE_URL}/v3/geocode/geo"
             params = {
-                "key": self.api_key,
                 "address": address
             }
 
             if city:
                 params["city"] = city
 
+            # 添加签名
+            if self.secret_key:
+                sig = self._generate_signature(params)
+                params["sig"] = sig
+
+            # 添加 key
+            params["key"] = self.api_key
+
+            logger.info(f"调用地理编码API: address={address}, city={city}")
+
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
                 response.raise_for_status()
                 data = response.json()
+
+                logger.debug(f"API响应: status={data.get('status')}, info={data.get('info')}")
 
                 if data.get("status") == "1" and data.get("geocodes"):
                     geocode = data["geocodes"][0]
@@ -74,7 +128,7 @@ class AMapGeocodingService:
                             "level": geocode.get("level", "")
                         }
 
-                logger.warning(f"地址解析失败: {address}")
+                logger.warning(f"地址解析失败: {address}, info={data.get('info')}, infocode={data.get('infocode')}")
                 return None
 
         except httpx.HTTPError as e:
@@ -101,6 +155,7 @@ class AMapGeocodingService:
                 "district": 区县,
                 "street": 街道
             }
+            如果解析失败返回None
         """
         if not self.api_key:
             logger.error("API密钥未配置")
@@ -108,11 +163,18 @@ class AMapGeocodingService:
 
         try:
             url = f"{self.BASE_URL}/v3/geocode/regeo"
+            location = f"{lng},{lat}"
             params = {
-                "key": self.api_key,
-                "location": f"{lng},{lat}",
-                "extensions": "base"  # base: 基本信息; all: 详细信息
+                "location": location,
+                "extensions": "base"  # 返回基本信息
             }
+
+            # 添加签名
+            if self.secret_key:
+                sig = self._generate_signature(params)
+                params["sig"] = sig
+
+            params["key"] = self.api_key
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
@@ -128,11 +190,10 @@ class AMapGeocodingService:
                         "province": address_component.get("province", ""),
                         "city": address_component.get("city", ""),
                         "district": address_component.get("district", ""),
-                        "street": address_component.get("township", ""),
-                        "street_number": address_component.get("streetNumber", "")
+                        "street": address_component.get("streetNumber", {}).get("street", "")
                     }
 
-                logger.warning(f"逆地理编码失败: {lng}, {lat}")
+                logger.warning(f"逆地理编码失败: {location}, info={data.get('info')}")
                 return None
 
         except httpx.HTTPError as e:
@@ -146,22 +207,21 @@ class AMapGeocodingService:
         self,
         keywords: str,
         city: Optional[str] = None,
-        city_limit: bool = False
+        limit: int = 20
     ) -> List[Dict[str, Any]]:
         """
-        关键字搜索：搜索POI（兴趣点）
+        POI 搜索：关键字搜索兴趣点
 
         Args:
             keywords: 搜索关键字
-            city: 指定搜索城市（可选）
-            city_limit: 是否限制在指定城市内搜索
+            city: 指定查询的城市（可选）
+            limit: 返回结果数量限制
 
         Returns:
-            POI列表，每个元素包含：
+            POI 列表，每个 POI 包含：
             {
                 "name": 名称,
-                "lng": 经度,
-                "lat": 纬度,
+                "location": 经纬度,
                 "address": 地址,
                 "type": 类型
             }
@@ -173,15 +233,19 @@ class AMapGeocodingService:
         try:
             url = f"{self.BASE_URL}/v5/place/text"
             params = {
-                "key": self.api_key,
                 "keywords": keywords,
-                "show_fields": "business,photos"
+                "offset": limit
             }
 
             if city:
                 params["city"] = city
-            if city_limit:
-                params["citylimit"] = "true"
+
+            # 添加签名
+            if self.secret_key:
+                sig = self._generate_signature(params)
+                params["sig"] = sig
+
+            params["key"] = self.api_key
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
@@ -192,20 +256,21 @@ class AMapGeocodingService:
                     results = []
                     for poi in data["pois"]:
                         location = poi.get("location", "")
+                        lng, lat = 0.0, 0.0
                         if "," in location:
-                            lng, lat = location.split(",")
-                            results.append({
-                                "name": poi.get("name", ""),
-                                "lng": float(lng),
-                                "lat": float(lat),
-                                "address": poi.get("address", ""),
-                                "type": poi.get("type", ""),
-                                "biz_type": poi.get("biz_type", ""),
-                                "photos": poi.get("photos", [])
-                            })
+                            lng_str, lat_str = location.split(",")
+                            lng, lat = float(lng_str), float(lat_str)
+
+                        results.append({
+                            "name": poi.get("name", ""),
+                            "location": {"lng": lng, "lat": lat},
+                            "address": poi.get("address", ""),
+                            "type": poi.get("type", "")
+                        })
+
                     return results
 
-                logger.warning(f"POI搜索失败: {keywords}")
+                logger.warning(f"POI搜索失败: {keywords}, info={data.get('info')}")
                 return []
 
         except httpx.HTTPError as e:
@@ -215,31 +280,20 @@ class AMapGeocodingService:
             logger.error(f"POI搜索异常: {e}")
             return []
 
-    async def get_driving_route(
+    async def driving_route(
         self,
-        origin: str,  # "经度,纬度"
-        destination: str,  # "经度,纬度"
-        strategy: int = 0
+        origin: Dict[str, float],
+        destination: Dict[str, float]
     ) -> Optional[Dict[str, Any]]:
         """
         驾车路径规划
 
         Args:
-            origin: 起点坐标 "经度,纬度"
-            destination: 终点坐标 "经度,纬度"
-            strategy: 路径规划策略
-                0: 速度优先
-                1: 费用优先
-                2: 距离优先
+            origin: 起点坐标 {"lng": 经度, "lat": 纬度}
+            destination: 终点坐标 {"lng": 经度, "lat": 纬度}
 
         Returns:
-            路径信息，格式：
-            {
-                "distance": 总距离(米),
-                "duration": 预计时间(秒),
-                "steps": 路段列表,
-                "polyline": 路径编码
-            }
+            路径信息，包含距离、时间等
         """
         if not self.api_key:
             logger.error("API密钥未配置")
@@ -247,12 +301,20 @@ class AMapGeocodingService:
 
         try:
             url = f"{self.BASE_URL}/v5/direction/driving"
+            origin_str = f"{origin['lng']},{origin['lat']}"
+            dest_str = f"{destination['lng']},{destination['lat']}"
+
             params = {
-                "key": self.api_key,
-                "origin": origin,
-                "destination": destination,
-                "strategy": strategy
+                "origin": origin_str,
+                "destination": dest_str
             }
+
+            # 添加签名
+            if self.secret_key:
+                sig = self._generate_signature(params)
+                params["sig"] = sig
+
+            params["key"] = self.api_key
 
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
@@ -263,17 +325,13 @@ class AMapGeocodingService:
                     route = data["route"]
                     paths = route.get("paths", [])
                     if paths:
-                        path = paths[0]
                         return {
-                            "distance": path.get("distance", 0),  # 米
-                            "duration": path.get("duration", 0),  # 秒
-                            "strategy": path.get("strategy", ""),
-                            "tolls": path.get("tolls", 0),  # 过路费
-                            "toll_distance": path.get("toll_distance", 0),  # 收费里程
-                            "steps": path.get("steps", [])
+                            "distance": paths[0].get("distance", 0),  # 米
+                            "duration": paths[0].get("duration", 0),  # 秒
+                            "steps": paths[0].get("steps", [])
                         }
 
-                logger.warning(f"路径规划失败: {origin} -> {destination}")
+                logger.warning(f"路径规划失败: info={data.get('info')}")
                 return None
 
         except httpx.HTTPError as e:
@@ -282,148 +340,3 @@ class AMapGeocodingService:
         except Exception as e:
             logger.error(f"路径规划异常: {e}")
             return None
-
-    async def get_walking_route(
-        self,
-        origin: str,
-        destination: str
-    ) -> Optional[Dict[str, Any]]:
-        """
-        步行路径规划
-
-        Args:
-            origin: 起点坐标 "经度,纬度"
-            destination: 终点坐标 "经度,纬度"
-
-        Returns:
-            路径信息
-        """
-        if not self.api_key:
-            logger.error("API密钥未配置")
-            return None
-
-        try:
-            url = f"{self.BASE_URL}/v5/direction/walking"
-            params = {
-                "key": self.api_key,
-                "origin": origin,
-                "destination": destination
-            }
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
-
-                if data.get("status") == "1" and data.get("route"):
-                    route = data["route"]
-                    paths = route.get("paths", [])
-                    if paths:
-                        path = paths[0]
-                        return {
-                            "distance": path.get("distance", 0),
-                            "duration": path.get("duration", 0),
-                            "steps": path.get("steps", [])
-                        }
-
-                logger.warning(f"步行路径规划失败: {origin} -> {destination}")
-                return None
-
-        except httpx.HTTPError as e:
-            logger.error(f"高德地图API请求失败: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"步行路径规划异常: {e}")
-            return None
-
-    async def batch_geocode(self, addresses: List[str], city: Optional[str] = None) -> List[Optional[Dict[str, Any]]]:
-        """
-        批量地址解析
-
-        Args:
-            addresses: 地址列表
-            city: 指定查询的城市（可选）
-
-        Returns:
-            经纬度信息列表，顺序与输入一致
-        """
-        results = []
-        for address in addresses:
-            result = await self.geocode(address, city)
-            results.append(result)
-        return results
-
-    async def enrich_itinerary_with_coordinates(
-        self,
-        itinerary_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        为行程数据添加地理坐标信息
-
-        Args:
-            itinerary_data: 行程数据，格式：
-                {
-                    "destination": 目的地,
-                    "days": [
-                        {
-                            "day_number": 1,
-                            "activities": [
-                                {
-                                    "title": "活动名称",
-                                    "location": "地址",
-                                    ...
-                                }
-                            ]
-                        }
-                    ]
-                }
-
-        Returns:
-            添加了coordinates字段的行程数据
-        """
-        destination = itinerary_data.get("destination", "")
-        days = itinerary_data.get("days", [])
-
-        enriched_days = []
-
-        for day_plan in days:
-            activities = day_plan.get("activities", [])
-            enriched_activities = []
-
-            for activity in activities:
-                location = activity.get("location", "")
-
-                # 尝试获取经纬度
-                coordinates = None
-                if location:
-                    # 先尝试在该城市下搜索
-                    geo_result = await self.geocode(location, city=destination)
-                    if not geo_result:
-                        # 如果失败，尝试不指定城市
-                        geo_result = await self.geocode(location)
-
-                    if geo_result:
-                        coordinates = {
-                            "lng": geo_result["lng"],
-                            "lat": geo_result["lat"]
-                        }
-
-                enriched_activity = {
-                    **activity,
-                    "coordinates": coordinates
-                }
-                enriched_activities.append(enriched_activity)
-
-            enriched_days.append({
-                **day_plan,
-                "activities": enriched_activities
-            })
-
-        return {
-            **itinerary_data,
-            "days": enriched_days
-        }
-
-
-# 创建全局实例
-geocoding_service = AMapGeocodingService()

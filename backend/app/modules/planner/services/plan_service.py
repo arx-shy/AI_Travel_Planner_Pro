@@ -81,6 +81,12 @@ class PlanService:
             departure=itinerary.departure
         )
 
+        # 为行程添加地理坐标
+        result = await self._enrich_itinerary_with_coordinates(
+            result,
+            itinerary.destination
+        )
+
         # 清除旧的DayDetail数据
         await self.plan_dao.delete_day_details(itinerary_id)
         logger.info(f"已清除旧的日程数据")
@@ -411,3 +417,60 @@ class PlanService:
 
     async def delete_itinerary(self, itinerary_id: int, user_id: int) -> bool:
         return await self.plan_dao.delete_plan(itinerary_id, user_id)
+
+    async def _enrich_itinerary_with_coordinates(
+        self,
+        itinerary: dict,
+        destination: str
+    ) -> dict:
+        """
+        为行程中的活动添加地理坐标
+
+        Args:
+            itinerary: AI生成的行程数据
+            destination: 目的地城市
+
+        Returns:
+            包含坐标的行程数据
+        """
+        from app.services.baidu_geocoding_service import BaiduGeocodingService
+
+        geocoding_service = BaiduGeocodingService()
+        days_data = itinerary.get('days', [])
+
+        for day_data in days_data:
+            activities = day_data.get('activities', [])
+
+            for activity in activities:
+                # 跳过已经有坐标的活动
+                if activity.get('coordinates'):
+                    continue
+
+                # 提取地址信息（优先级：location > title）
+                address = activity.get('location') or activity.get('title')
+                if not address:
+                    continue
+
+                try:
+                    # 调用百度地图API获取坐标
+                    coords = await geocoding_service.geocode(
+                        address=address,
+                        city=destination
+                    )
+
+                    if coords:
+                        activity['coordinates'] = {
+                            'lng': coords['lng'],
+                            'lat': coords['lat']
+                        }
+                        logger.info(f"✅ 已获取坐标: {address} -> ({coords['lng']}, {coords['lat']})")
+                    else:
+                        logger.warning(f"⚠️ 未找到坐标: {address}")
+
+                except Exception as e:
+                    logger.error(f"❌ 地理编码失败: {address}, 错误: {e}")
+                    # 失败时继续处理下一个活动
+                    continue
+
+        logger.info(f"📍 地理坐标添加完成")
+        return itinerary

@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     WEATHER_API_KEY: Optional[str] = None
     WEATHER_API_ID: Optional[str] = None
     MAP_API_KEY: Optional[str] = None
+    MAP_PROVIDER: Optional[str] = "baidu"  # baidu or amap
+    MAP_SECRET_KEY: Optional[str] = None
     FLIGHT_API_KEY: Optional[str] = None
     HOTEL_API_KEY: Optional[str] = None
 

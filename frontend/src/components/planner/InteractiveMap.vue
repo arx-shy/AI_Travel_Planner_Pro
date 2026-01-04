@@ -231,11 +231,11 @@ async function initMap() {
       attributionControl: false
     })
 
-    // 添加高德地图瓦片层
-    const tileLayer = L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    // 添加地图瓦片层（使用 OpenStreetMap，兼容百度地图坐标）
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
       minZoom: 3,
-      maxZoom: 18,
-      subdomains: ['01', '02', '03', '04']
+      maxZoom: 19
     })
 
     map.value.addLayer(tileLayer)
