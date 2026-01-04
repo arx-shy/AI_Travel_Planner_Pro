@@ -8,6 +8,7 @@ from app.core.db.session import get_db
 from app.core.security.deps import get_current_user
 from app.modules.planner.schemas.plan_schema import PlanCreate, PlanUpdate, PlanResponse
 from app.modules.planner.services.plan_service import PlanService
+from app.modules.users.services.quota_service import QuotaService
 
 router = APIRouter()
 
@@ -30,6 +31,10 @@ async def generate_itinerary(
     current_user = Depends(get_current_user)
 ):
     """创建基础行程（仅信息，不含详细日程）"""
+    # 检查配额
+    quota_service = QuotaService(db)
+    await quota_service.check_and_increment_plan_quota(current_user.id)
+    
     plan_service = PlanService(db)
     itinerary = await plan_service.generate_itinerary(current_user.id, itinerary_data, use_strict_json)
     return itinerary

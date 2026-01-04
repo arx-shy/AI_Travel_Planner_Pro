@@ -4,7 +4,7 @@ User Model
 This module defines the User database model using SQLAlchemy.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Enum, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, Enum, DateTime, Date, JSON, func
 from sqlalchemy.orm import relationship
 from app.core.db.base import Base
 
@@ -20,6 +20,10 @@ class User(Base):
         name: User full name
         is_active: Whether the user account is active
         membership_level: User membership level (free/pro)
+        avatar_url: User avatar URL
+        plan_usage_count: Number of plans generated this month
+        copywriter_usage_count: Number of copywriting generated this month
+        last_quota_reset: Last date when usage quota was reset
         created_at: Account creation timestamp
         updated_at: Last update timestamp
     """
@@ -41,6 +45,21 @@ class User(Base):
         nullable=False,
         comment="Membership level"
     )
+    
+    # Usage tracking fields
+    avatar_url = Column(String(500), nullable=True, comment="User avatar URL")
+    phone = Column(String(30), nullable=True, comment="User phone number")
+    gender = Column(String(20), nullable=True, comment="User gender")
+    birth_date = Column(Date, nullable=True, comment="User birth date")
+    city = Column(String(100), nullable=True, comment="User city")
+    country = Column(String(100), nullable=True, comment="User country")
+    bio = Column(String(500), nullable=True, comment="User bio")
+    preferred_language = Column(String(50), nullable=True, comment="Preferred language")
+    preferred_currency = Column(String(20), nullable=True, comment="Preferred currency")
+    social_accounts = Column(JSON, nullable=True, comment="Social accounts")
+    plan_usage_count = Column(Integer, default=0, nullable=False, comment="Number of plans generated this month")
+    copywriter_usage_count = Column(Integer, default=0, nullable=False, comment="Number of copywriting generated this month")
+    last_quota_reset = Column(Date, nullable=True, comment="Last date when usage quota was reset")
     
     # Timestamps
     created_at = Column(

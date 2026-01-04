@@ -133,7 +133,7 @@ class UserService:
             Updated user object or None
         """
         # Remove sensitive fields from kwargs
-        sensitive_fields = ['id', 'hashed_password', 'email', 'created_at']
+        sensitive_fields = ['id', 'hashed_password', 'email', 'created_at', 'membership_level']
         for field in sensitive_fields:
             kwargs.pop(field, None)
         

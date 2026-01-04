@@ -1,11 +1,11 @@
-﻿// API 鍝嶅簲绫诲瀷瀹氫箟
+// API 响应类型定义
 export interface ApiResponse<T = any> {
   code: number
   message: string
   data: T
 }
 
-// 鍒嗛〉鍝嶅簲绫诲瀷
+// 分页响应类型
 export interface PaginatedResponse<T = any> {
   items: T[]
   total: number
@@ -14,20 +14,45 @@ export interface PaginatedResponse<T = any> {
   total_pages: number
 }
 
-// API 璇锋眰鍙傛暟绫诲瀷
+// API 请求参数类型
 export interface ApiRequest {
   [key: string]: any
 }
 
-// 鐢ㄦ埛鐩稿叧绫诲瀷
+// 用户相关类型
 export interface User {
   id: number
   email: string
   name: string
   avatar?: string
+  avatar_url?: string
+  phone?: string
+  gender?: 'male' | 'female' | 'other' | 'unspecified'
+  birth_date?: string
+  city?: string
+  country?: string
+  bio?: string
+  preferred_language?: string
+  preferred_currency?: string
+  social_accounts?: Record<string, string>
   membership_level: 'free' | 'pro'
+  plan_usage_count?: number
+  copywriter_usage_count?: number
+  last_quota_reset?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface UserQuotaInfo {
+  membership_level: string
+  is_pro: boolean
+  plan_usage_count: number
+  plan_limit: number
+  remaining_plans: number
+  copywriter_usage_count: number
+  copywriter_limit: number
+  last_reset: string | null
+  unlimited: boolean
 }
 
 export interface LoginRequest {
@@ -41,7 +66,7 @@ export interface RegisterRequest {
   name: string
 }
 
-// 琛岀▼瑙勫垝鐩稿叧绫诲瀷 (V2.0 - 鏀寔涓板瘜鐨勫疄鐢ㄤ俊鎭?
+// 行程规划相关类型 (V2.0 - 支持丰富的实用信息)
 export interface Itinerary {
   id: number
   user_id: number
@@ -49,174 +74,81 @@ export interface Itinerary {
   destination: string
   departure?: string | null
   days: number
-  budget: number | null
-  travel_style: 'leisure' | 'adventure' | 'foodie'
-  status: 'draft' | 'active' | 'completed' | 'archived'
-  ai_generated?: boolean
+  budget?: number | null
+  travel_style?: string | null
+  created_at: string
+  updated_at: string
 
-  // V2 鏂板瀛楁
+  // V2.0 新增字段
   summary?: string
   highlights?: string[]
   best_season?: string
   weather?: string
   actual_cost?: number
-  cost_breakdown?: CostBreakdown
   preparation?: PreparationInfo
   tips?: TravelTips
-  cover_image?: string
 
+  // 详细行程（V2.0）
   days_detail?: DayPlan[]
-  created_at: string
-  updated_at: string
 }
 
-export interface ItineraryCreateRequest {
-  title: string
-  destination: string
-  departure?: string | null
-  days: number
-  budget?: number | null
-  travel_style: 'leisure' | 'adventure' | 'foodie'
-  use_strict_json?: boolean
-}
-
-// 璐圭敤鏄庣粏
-export interface CostBreakdown {
-  transportation: number
-  accommodation: number
-  food: number
-  tickets: number
-  shopping: number
-  other: number
-}
-
-// 琛屽墠鍑嗗
 export interface PreparationInfo {
-  documents: string[]
-  essentials: string[]
-  suggestions: string[]
-  booking_reminders: string[]
+  visa?: string
+  currency?: string
+  language?: string
+  electricity?: string
+  packing_list?: string[]
+  budget_breakdown?: BudgetBreakdown
 }
 
-// 瀹炵敤鎻愮ず
+export interface BudgetBreakdown {
+  accommodation?: number
+  transportation?: number
+  food?: number
+  activities?: number
+  other?: number
+}
+
 export interface TravelTips {
-  transportation?: string
+  transport?: string
   accommodation?: string
   food?: string
-  shopping?: string
+  culture?: string
   safety?: string
-  other?: string[]
 }
 
-// 姣忔棩琛岀▼ (V2.0)
 export interface DayPlan {
+  id: number
+  itinerary_id: number
   day_number: number
   title: string
-  date?: string
+  date?: string | null
   summary?: string
-  activities: Activity[]
-  notes?: string
+  activities?: Activity[]
   total_cost?: number
-  accommodation?: AccommodationInfo
 }
 
-// 娲诲姩淇℃伅 (V2.0 - 鐢ㄦ埛鍙嬪ソ璁捐)
 export interface Activity {
-  // 鍩烘湰淇℃伅
   title: string
-  type: 'attraction' | 'meal' | 'transport' | 'accommodation' | 'shopping' | 'entertainment'
+  type: 'attraction' | 'meal' | 'transport' | 'accommodation'
+  description: string
   time: string
   duration: string
-
-  // 鏅偣/娲诲姩淇℃伅
-  description: string
-  highlights?: string[]
-  address?: string
-  ticket_price?: number
-  need_booking?: boolean
-  booking_info?: string
-
-  // 椁愰ギ淇℃伅
-  cuisine?: string
   average_cost: number
-  recommended_dishes?: string[]
-  wait_time?: string
-  opening_hours?: string
-
-  // 璐村＋淇℃伅
-  best_time?: string
-  tips?: string[]
-  dress_code?: string
-
-  // 浜ら€氫俊鎭?
-  transportation?: TransportationInfo
-  parking_info?: string
-
-  // 鎶€鏈暟鎹紙鐢ㄤ簬鍦板浘锛?
+  location?: string
   coordinates?: {
     lng: number
     lat: number
   }
+  tips?: string[]
 }
 
-// 浜ら€氫俊鎭?
-export interface TransportationInfo {
-  method: string
-  from_location?: string
-  to_location?: string
-  duration: string
-  cost: number
-  tips?: string
-}
-
-// 浣忓淇℃伅
-export interface AccommodationInfo {
-  name: string
-  address: string
-  type: string
-  facilities?: string[]
-  rating?: number
-  booking_status?: string
-}
-
-// QA 鑱婂ぉ鐩稿叧绫诲瀷
-export interface ChatMessage {
-  id: number
-  role: 'user' | 'assistant'
-  content: string
-  session_id: number
-  message_type?: 'text' | 'voice'
-  created_at?: string
-  timestamp?: string
-  metadata?: Record<string, any>
-}
-
-export interface ChatSession {
-  id: number
-  user_id: number
-  title: string
-  features?: {
-    knowledge_base?: boolean
-    weather?: boolean
-    voice?: boolean
-  }
-  created_at: string
-  updated_at: string
-}
-
-export interface QaRequest {
-  question: string
-  session_id?: string
-  context?: Record<string, any>
-}
-
-// 鏂囨鐢熸垚鐩稿叧绫诲瀷
+// 文案生成相关类型
 export interface CopywritingRequest {
   platform: 'xiaohongshu' | 'wechat' | 'weibo'
   keywords: string[]
   emotion_level: number
   images?: string[]
-  custom_style?: string
 }
 
 export interface CopywritingResult {
@@ -224,24 +156,26 @@ export interface CopywritingResult {
   content: string
   platform: string
   keywords: string[]
-  created_at: string
+  images: string[]
   rating?: number | null
+  created_at: string
 }
 
-// 璁よ瘉鐩稿叧绫诲瀷
-export interface AuthToken {
-  access_token: string
-  token_type: string
-  expires_in: number
+// AI 对话相关类型
+export interface ChatMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  session_id: number
+  created_at: string
 }
 
-export interface AuthResponse {
-  access_token: string
-  token_type: string
-  expires_in: number
-  user: User
+export interface ChatRequest {
+  message: string
+  session_id?: number
 }
 
-export interface LoginResponse extends AuthResponse {}
-export interface RegisterResponse extends AuthResponse {}
-
+export interface ChatResponse {
+  message: string
+  session_id: number
+}

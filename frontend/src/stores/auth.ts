@@ -1,7 +1,19 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import api from '@/utils/api'
-import type { User, LoginRequest, RegisterRequest, LoginResponse, RegisterResponse } from '@/types/api'
+import type { User, LoginRequest, RegisterRequest } from '@/types/api'
+
+interface UserQuotaInfo {
+  membership_level: string
+  is_pro: boolean
+  plan_usage_count: number
+  plan_limit: number
+  remaining_plans: number
+  copywriter_usage_count: number
+  copywriter_limit: number
+  last_reset: string | null
+  unlimited: boolean
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
@@ -9,6 +21,14 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null)
   const isAuthenticated = ref(false)
   const isLoading = ref(false)
+  const quotaInfo = ref<UserQuotaInfo | null>(null)
+
+  // 计算属性
+  const isPro = computed(() => user.value?.membership_level === 'pro')
+  const remainingPlans = computed(() => {
+    if (!quotaInfo.value) return 0
+    return quotaInfo.value.unlimited ? -1 : quotaInfo.value.remaining_plans
+  })
 
   // 从本地存储初始化
   const initFromStorage = () => {
@@ -38,6 +58,9 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', response.access_token)
       localStorage.setItem('user', JSON.stringify(response.user))
 
+      // 加载配额信息
+      await fetchQuota()
+
       return { success: true }
     } catch (error) {
       console.error('Login failed:', error)
@@ -63,6 +86,9 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', response.access_token)
       localStorage.setItem('user', JSON.stringify(response.user))
 
+      // 加载配额信息
+      await fetchQuota()
+
       return { success: true }
     } catch (error) {
       console.error('Register failed:', error)
@@ -82,10 +108,37 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     isAuthenticated.value = false
+    quotaInfo.value = null
 
     // 清除本地存储
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+  }
+
+  // 获取当前用户信息
+  const fetchCurrentUser = async () => {
+    if (!isAuthenticated.value) return
+
+    try {
+      const response = await api.get<User>('/api/v1/auth/me')
+      user.value = response
+      localStorage.setItem('user', JSON.stringify(response))
+    } catch (error) {
+      console.error('Fetch current user failed:', error)
+    }
+  }
+
+  // 获取配额信息
+  const fetchQuota = async () => {
+    if (!isAuthenticated.value) return
+
+    try {
+      const response = await api.get<UserQuotaInfo>('/api/v1/auth/quota')
+      quotaInfo.value = response
+      console.log('Quota info:', response)
+    } catch (error) {
+      console.error('Fetch quota failed:', error)
+    }
   }
 
   // 更新用户信息
@@ -110,12 +163,19 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isAuthenticated,
     isLoading,
+    quotaInfo,
+
+    // 计算属性
+    isPro,
+    remainingPlans,
 
     // 方法
     initFromStorage,
     login,
     register,
     logout,
+    fetchCurrentUser,
+    fetchQuota,
     updateProfile
   }
 })

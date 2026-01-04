@@ -14,6 +14,15 @@
           :membership="membership"
           :level="level"
           :avatar-url="avatarUrl"
+          :phone="user?.phone || ''"
+          :gender="user?.gender || ''"
+          :birth-date="user?.birth_date || ''"
+          :city="user?.city || ''"
+          :country="user?.country || ''"
+          :bio="user?.bio || ''"
+          :preferred-language="user?.preferred_language || ''"
+          :preferred-currency="user?.preferred_currency || ''"
+          @edit="handleEditProfile"
         />
 
         <div class="grid md:grid-cols-2 gap-6">
@@ -83,6 +92,10 @@ const avatarUrl = computed(() => {
   }
   return 'https://i.pravatar.cc/150?img=12'
 })
+
+const handleEditProfile = () => {
+  router.push('/profile/edit')
+}
 
 // 退出登录
 const handleLogout = async () => {

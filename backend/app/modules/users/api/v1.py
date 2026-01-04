@@ -4,12 +4,13 @@ User API Routes
 This module defines FastAPI routes for user operations.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.session import get_db
 from app.core.security.deps import get_current_user
 from app.modules.users.services.user_service import UserService
+from app.modules.users.services.quota_service import QuotaService
 from app.modules.users.schemas.user import (
     UserCreate,
     UserLogin,
@@ -17,11 +18,16 @@ from app.modules.users.schemas.user import (
     UserResponse,
     LoginResponse,
     RegisterResponse,
-    PasswordChange
+    PasswordChange,
+    UserQuotaInfo
 )
 from app.modules.users.models.user import User
 from app.core.config.settings import settings
+import os
+import uuid
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 security = HTTPBearer()
 
@@ -118,7 +124,17 @@ async def update_current_user(
     user_service = UserService(db)
     updated_user = await user_service.update_user(
         user_id=current_user.id,
-        name=user_data.name
+        name=user_data.name,
+        avatar_url=user_data.avatar_url,
+        phone=user_data.phone,
+        gender=user_data.gender,
+        birth_date=user_data.birth_date,
+        city=user_data.city,
+        country=user_data.country,
+        bio=user_data.bio,
+        preferred_language=user_data.preferred_language,
+        preferred_currency=user_data.preferred_currency,
+        social_accounts=user_data.social_accounts
     )
     
     if not updated_user:
@@ -154,3 +170,67 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@router.get("/quota", response_model=UserQuotaInfo)
+async def get_user_quota(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    获取当前用户配额信息
+    """
+    quota_service = QuotaService(db)
+    quota_info = await quota_service.get_user_quota_info(current_user.id)
+    return UserQuotaInfo(**quota_info)
+
+
+@router.post("/upload-avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    上传用户头像
+    """
+    # 验证文件类型
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="只支持图片文件"
+        )
+    
+    # 验证文件大小（最大 5MB）
+    MAX_FILE_SIZE = 5 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="图片大小不能超过 5MB"
+        )
+    
+    # 生成文件名
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    
+    # 保存到 static/uploads/avatars
+    upload_dir = "static/uploads/avatars"
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, filename)
+    
+    with open(file_path, "wb") as f:
+        f.write(contents)
+    
+    avatar_url = f"/static/uploads/avatars/{filename}"
+    
+    # 更新用户头像 URL
+    user_service = UserService(db)
+    updated_user = await user_service.update_user(
+        user_id=current_user.id,
+        avatar_url=avatar_url
+    )
+    
+    logger.info(f"Avatar uploaded for user {current_user.id}: {filename}")
+    
+    return UserResponse.model_validate(updated_user)

@@ -3,7 +3,6 @@
  */
 
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -51,6 +50,18 @@ const routes: RouteRecordRaw[] = [
     name: 'Settings',
     component: () => import('@/views/Settings.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile/edit',
+    name: 'ProfileEdit',
+    component: () => import('@/views/ProfileEdit.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/debug-profile',
+    name: 'ProfileDebug',
+    component: () => import('@/views/ProfileEditSimple.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -60,9 +71,15 @@ const router = createRouter({
 })
 
 // Route guards
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  // 动态导入 authStore 以避免循环依赖
+  const { useAuthStore } = await import('@/stores/auth')
   const authStore = useAuthStore()
-  authStore.initFromStorage()
+
+  // 确保初始化
+  if (!authStore.isAuthenticated && localStorage.getItem('token')) {
+    authStore.initFromStorage()
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')

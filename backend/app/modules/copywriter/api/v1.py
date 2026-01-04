@@ -1,4 +1,4 @@
-﻿"""
+"""
 Copywriter Module API Routes (v1)
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
@@ -8,6 +8,7 @@ from app.core.security.deps import get_current_active_user
 from app.modules.copywriter.schemas.content_schema import ContentCreate, ContentResponse, ContentRating
 from app.modules.copywriter.services.content_service import ContentService
 from app.modules.copywriter.services.image_storage import ImageStorageService
+from app.modules.users.services.quota_service import QuotaService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,10 @@ async def generate_content(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
+    # 检查配额
+    quota_service = QuotaService(db)
+    await quota_service.check_and_increment_copywriter_quota(current_user.id)
+    
     service = ContentService(db)
     content = await service.generate_content(current_user.id, content_data)
     return ContentResponse.model_validate(content)
