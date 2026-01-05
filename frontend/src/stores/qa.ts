@@ -74,7 +74,7 @@ export const useQaStore = defineStore('qa', () => {
         title: title || '新对话',
         features: features ? normalizeFeatures(features) : undefined
       }
-      const response = await api.post<any>('/qa/sessions', payload)
+      const response = await api.post<any>('/api/v1/qa/sessions', payload)
       console.log('Create session response:', response)
 
       const sessionPayload = getResponsePayload<{ session?: QaSessionResponse }>(response)?.session
@@ -105,7 +105,7 @@ export const useQaStore = defineStore('qa', () => {
   // 获取所有会话
   const fetchSessions = async (page = 1, size = 20) => {
     try {
-      const response = await api.get<any>('/qa/sessions', {
+      const response = await api.get<any>('/api/v1/qa/sessions', {
         params: { page, size }
       })
       const items = getResponsePayload<{ items?: QaSessionResponse[] }>(response)?.items || []
@@ -127,7 +127,7 @@ export const useQaStore = defineStore('qa', () => {
   // 切换会话
   const switchSession = async (sessionId: number) => {
     try {
-      const response = await api.get<any>(`/qa/sessions/${sessionId}/messages`, {
+      const response = await api.get<any>(`/api/v1/qa/sessions/${sessionId}/messages`, {
         params: { page: 1, size: 50 }
       })
       const items = getResponsePayload<{ items?: QaMessageResponse[] }>(response)?.items || []
@@ -210,7 +210,7 @@ export const useQaStore = defineStore('qa', () => {
     try {
       console.log('发送API请求...')
 
-      const response = await api.post<any>('/qa/messages', {
+      const response = await api.post<any>('/api/v1/qa/messages', {
         content,
         session_id: targetSessionId,
         message_type: 'text'

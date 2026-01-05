@@ -54,6 +54,7 @@ class KnowledgeBase:
         self._store: Optional[BM25VectorStore] = None
         self._retriever: Optional[Retriever] = None
         self._current_index_key: Optional[str] = None
+        self._max_text_length = 500000  # 限制单个 PDF 文本最大长度 (500KB)
 
     def _list_pdfs(self) -> List[Path]:
         if not self.dataset_dir.exists():
@@ -120,16 +121,28 @@ class KnowledgeBase:
             try:
                 cached_meta = json.loads(meta_path.read_text(encoding="utf-8"))
                 if cached_meta == meta:
-                    return text_path.read_text(encoding="utf-8", errors="ignore")
+                    text = text_path.read_text(encoding="utf-8", errors="ignore")
+                    # 限制返回的文本长度
+                    if len(text) > self._max_text_length:
+                        return text[:self._max_text_length]
+                    return text
             except Exception:
                 pass
 
         reader = PdfReader(str(pdf_path))
         pages = reader.pages[: self.max_pages]
         texts = []
+        total_length = 0
         for page in pages:
             text = page.extract_text() or ""
+            # 累计长度检查
+            if total_length + len(text) > self._max_text_length:
+                remaining = self._max_text_length - total_length
+                if remaining > 0:
+                    texts.append(text[:remaining])
+                break
             texts.append(text)
+            total_length += len(text)
         full_text = "\n".join(texts)
         try:
             text_path.write_text(full_text, encoding="utf-8")
@@ -243,7 +256,29 @@ class KnowledgeBase:
         except Exception:
             pass
 
+    async def retrieve_async(self, query: str, top_k: int = 4) -> RetrievalResult:
+        """异步版本的 retrieve，避免阻塞事件循环"""
+        # 在线程池中执行同步的匹配和索引操作
+        pdfs = await asyncio.to_thread(self._match_documents, query)
+        signature, meta = self._index_signature(pdfs)
+
+        if self._current_index_key != signature:
+            loaded = await asyncio.to_thread(self._load_index, signature)
+            if not loaded:
+                # 索引构建是最耗时的操作，在线程池中执行
+                await asyncio.to_thread(self._build_index, pdfs)
+                await asyncio.to_thread(self._save_index, signature, meta)
+            self._current_index_key = signature
+
+        if not self._retriever:
+            return RetrievalResult(chunks=[])
+
+        # 检索操作也在线程池中执行
+        chunks = await asyncio.to_thread(self._retriever.retrieve, query, top_k=top_k)
+        return RetrievalResult(chunks=chunks)
+
     def retrieve(self, query: str, top_k: int = 4) -> RetrievalResult:
+        """同步版本的 retrieve（向后兼容）"""
         pdfs = self._match_documents(query)
         signature, meta = self._index_signature(pdfs)
         if self._current_index_key != signature:

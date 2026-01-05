@@ -216,7 +216,7 @@ const queryWeather = () => {
 
   void (async () => {
     try {
-      const response = await api.get<any>(`/qa/weather/${encodeURIComponent(city)}`)
+      const response = await api.get<any>(`/api/v1/qa/weather/${encodeURIComponent(city)}`)
       const payload = response?.data ?? response
       const forecast = payload?.forecast || []
 
@@ -389,7 +389,7 @@ const playRecording = () => {
 
   // 获取最后一条助手回复并朗读
   const lastAssistantMessage = messages.value
-    .filter((m) => m.role === 'assistant')
+    .filter((m: any) => m.role === 'assistant')
     .pop()
 
   if (!lastAssistantMessage) {

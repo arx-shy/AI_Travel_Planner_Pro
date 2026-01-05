@@ -77,6 +77,45 @@ class QAAgent:
             self._retriever = Retriever(kb._store) if kb and kb._store else None
         return self._retriever
 
+    async def _retrieve_context_async(self, query: str) -> List[Dict[str, Any]]:
+        """
+        异步检索相关文档块（避免阻塞事件循环）
+
+        Args:
+            query: User's question
+
+        Returns:
+            List of retrieved chunks with metadata
+        """
+        if not self.enable_rag:
+            return []
+
+        kb = self._get_knowledge_base()
+        if not kb:
+            return []
+
+        try:
+            # 使用异步版本的检索方法
+            retrieval = await kb.retrieve_async(query, top_k=self.top_k)
+            chunks = retrieval.chunks
+            if chunks:
+                sources = [f"{chunk.source}#p{chunk.page}" for chunk in chunks]
+                logger.info("RAG retrieved %s chunks for query '%s': %s", len(chunks), query, sources)
+            else:
+                logger.info("RAG retrieved 0 chunks for query '%s'", query)
+            return [
+                {
+                    "content": chunk.content,
+                    "source": chunk.source,
+                    "page": chunk.page,
+                    "chunk_id": chunk.chunk_id
+                }
+                for chunk in chunks
+            ]
+        except Exception as e:
+            logger.error(f"Retrieval error: {e}")
+            return []
+
     def _retrieve_context(self, query: str) -> List[Dict[str, Any]]:
         """
         Retrieve relevant chunks for the query.
@@ -194,7 +233,8 @@ class QAAgent:
         messages = []
 
         if use_rag:
-            context_chunks = self._retrieve_context(query)
+            # 使用异步检索避免阻塞
+            context_chunks = await self._retrieve_context_async(query)
             if context_chunks:
                 context = "\n\n".join([
                     f"[来源: {c['source']} 第{c['page']}页\n{c['content']}"
@@ -243,7 +283,8 @@ class QAAgent:
         messages = []
 
         if use_rag:
-            context_chunks = self._retrieve_context(query)
+            # 使用异步检索避免阻塞
+            context_chunks = await self._retrieve_context_async(query)
             if context_chunks:
                 context = "\n\n".join([
                     f"[来源: {c['source']} 第{c['page']}页\n{c['content']}"
