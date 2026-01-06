@@ -5,7 +5,8 @@ import { fileURLToPath, URL } from 'node:url'
 // GitHub Pages 部署路径配置
 // 格式: /<仓库名>/
 // 如果使用自定义域名，设置为 '/'
-const base = process.env.GITHUB_PAGES ? '/AI_Travel_Planner_Pro/' : '/'
+const isGitHubPages = process.env.GITHUB_PAGES === 'true' || process.env.CI === 'true'
+const base = isGitHubPages ? '/AI_Travel_Planner_Pro/' : '/'
 
 // https://vitejs.dev/config/
 export default defineConfig({
