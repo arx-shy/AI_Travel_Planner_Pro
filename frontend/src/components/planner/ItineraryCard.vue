@@ -298,7 +298,7 @@
             v-if="itinerary.tips?.shopping"
             icon="shopping-bag"
             title="购物"
-            :content="itinerary.tips.shopping"
+            :content="Array.isArray(itinerary.tips.shopping) ? itinerary.tips.shopping.join('; ') : itinerary.tips.shopping"
           />
           <TipCard
             v-if="itinerary.tips?.safety"
@@ -310,7 +310,7 @@
             v-if="itinerary.tips?.other && itinerary.tips.other.length"
             icon="info-circle"
             title="其他提示"
-            :content="itinerary.tips.other.join('; ')"
+            :content="Array.isArray(itinerary.tips.other) ? itinerary.tips.other.join('; ') : itinerary.tips.other"
           />
         </div>
       </div>

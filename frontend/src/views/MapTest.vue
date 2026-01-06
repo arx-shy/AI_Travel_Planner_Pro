@@ -49,9 +49,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import InteractiveMap from '@/components/planner/InteractiveMap.vue'
+import type { Activity, DayPlan } from '@/types/api'
 
 // 带完整坐标的测试数据
-const testItinerary = ref({
+const testItinerary = ref<{
+  title: string
+  destination: string
+  days: number
+  days_detail: DayPlan[]
+}>({
   title: '北京3日文化深度游',
   destination: '北京',
   days: 3,
@@ -63,7 +69,7 @@ const testItinerary = ref({
         {
           time: '09:00',
           title: '故宫博物院',
-          type: 'attraction',
+          type: 'attraction' as Activity['type'],
           description: '中国明清两代的皇家宫殿',
           location: '北京市东城区景山前街4号',
           duration: '3小时',
@@ -76,7 +82,7 @@ const testItinerary = ref({
         {
           time: '12:30',
           title: '全聚德烤鸭店',
-          type: 'meal',
+          type: 'meal' as Activity['type'],
           description: '百年老字号，品尝正宗北京烤鸭',
           location: '北京市东城区前门大街30号',
           duration: '1.5小时',
@@ -89,7 +95,7 @@ const testItinerary = ref({
         {
           time: '15:00',
           title: '天安门广场',
-          type: 'attraction',
+          type: 'attraction' as Activity['type'],
           description: '世界上最大的城市广场之一',
           location: '北京市东城区',
           duration: '1小时',
@@ -102,7 +108,7 @@ const testItinerary = ref({
         {
           time: '19:00',
           title: '北京饭店',
-          type: 'accommodation',
+          type: 'accommodation' as Activity['type'],
           description: '四星级商务酒店',
           location: '北京市东城区东长安街33号',
           duration: '晚上',
@@ -121,7 +127,7 @@ const testItinerary = ref({
         {
           time: '08:00',
           title: '八达岭长城',
-          type: 'attraction',
+          type: 'attraction' as Activity['type'],
           description: '明长城的精华路段',
           location: '北京市延庆区八达岭',
           duration: '4小时',
@@ -134,7 +140,7 @@ const testItinerary = ref({
         {
           time: '13:00',
           title: '长城脚下农家菜',
-          type: 'meal',
+          type: 'meal' as Activity['type'],
           description: '品尝当地特色菜',
           location: '北京市延庆区八达岭镇',
           duration: '1小时',
@@ -153,7 +159,7 @@ const testItinerary = ref({
         {
           time: '09:00',
           title: '颐和园',
-          type: 'attraction',
+          type: 'attraction' as Activity['type'],
           description: '中国古典园林之首',
           location: '北京市海淀区新建宫门路',
           duration: '3小时',
@@ -166,7 +172,7 @@ const testItinerary = ref({
         {
           time: '12:30',
           title: '颐和园附近餐厅',
-          type: 'meal',
+          type: 'meal' as Activity['type'],
           description: '享用午餐',
           location: '北京市海淀区',
           duration: '1小时',

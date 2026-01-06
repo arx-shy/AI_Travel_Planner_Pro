@@ -186,8 +186,8 @@ interface Props {
   height?: string
   itinerary?: {
     destination: string
-    days_detail?: DayPlan[]
-  }
+    days_detail?: any[]
+  } | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -382,7 +382,7 @@ function addMarkersAndRoutes() {
   // 调整地图视图以显示所有标记
   if (markers.value.length > 0) {
     try {
-      const group = new L.FeatureGroup(markers.value)
+      const group = new L.FeatureGroup(markers.value as any)
       map.value.fitBounds(group.getBounds(), { padding: [50, 50] })
       console.log('✅ 地图视图已调整')
     } catch (error) {
@@ -549,8 +549,8 @@ function closePopup() {
  * 清除所有标记和路线
  */
 function clearMarkersAndRoutes() {
-  markers.value.forEach(marker => map.value!.removeLayer(marker))
-  polylines.value.forEach(line => map.value!.removeLayer(line))
+  markers.value.forEach(marker => map.value!.removeLayer(marker as any))
+  polylines.value.forEach(line => map.value!.removeLayer(line as any))
   markers.value = []
   polylines.value = []
 }

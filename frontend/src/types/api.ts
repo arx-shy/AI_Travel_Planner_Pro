@@ -120,13 +120,13 @@ export interface TravelTips {
   food?: string
   culture?: string
   safety?: string
-  shopping?: string
-  other?: string
+  shopping?: string | string[]
+  other?: string | string[]
 }
 
 export interface DayPlan {
-  id: number
-  itinerary_id: number
+  id?: number
+  itinerary_id?: number
   day_number: number
   title: string
   date?: string | null
@@ -161,7 +161,7 @@ export interface Activity {
   tips?: string[]
   // V2.0 新增字段
   highlights?: string[]
-  ticket_price?: {
+  ticket_price?: number | {
     adult?: number
     student?: number
     child?: number

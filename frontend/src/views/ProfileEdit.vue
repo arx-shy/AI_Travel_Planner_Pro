@@ -204,6 +204,7 @@ import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/common/AppSidebar.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -217,7 +218,7 @@ const form = reactive({
   email: '',
   avatarUrl: '',
   phone: '',
-  gender: 'unspecified',
+  gender: 'unspecified' as User['gender'] | undefined,
   birthDate: '',
   city: '',
   country: '',
