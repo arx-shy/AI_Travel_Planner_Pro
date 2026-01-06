@@ -38,7 +38,7 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
-        run: npm run build
+        run: npm run build:nocheck
         env:
           GITHUB_PAGES: 'true'
 

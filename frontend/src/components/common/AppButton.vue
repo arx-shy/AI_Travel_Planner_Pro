@@ -18,7 +18,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppIcon from '@/components/common/AppIcon.vue'
 
-type Variant = 'primary' | 'secondary' | 'ghost'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'outline'
 type Size = 'sm' | 'md' | 'lg'
 
 const props = withDefaults(
@@ -65,7 +65,9 @@ const variantClasses: Record<Variant, string> = {
   primary: 'btn-primary',
   secondary:
     'rounded-lg border border-slate-200 text-slate-600 hover:border-teal-400 hover:text-teal-600',
-  ghost: 'rounded-lg text-slate-600 hover:text-teal-600'
+  ghost: 'rounded-lg text-slate-600 hover:text-teal-600',
+  outline:
+    'rounded-lg border-2 border-teal-500 text-teal-600 hover:bg-teal-50 hover:border-teal-600'
 }
 
 const buttonClasses = computed(() => [

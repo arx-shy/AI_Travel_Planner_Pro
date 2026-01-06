@@ -11,7 +11,7 @@ export const longRunningApi = axios.create({
   timeout: 180000 // 3分钟，用于AI生成详细行程
 })
 
-// 为longRunningApi添加相同的拦截器
+// 为longRunningApi添加拦截器
 longRunningApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -107,4 +107,3 @@ api.interceptors.response.use(
 )
 
 export default api
-

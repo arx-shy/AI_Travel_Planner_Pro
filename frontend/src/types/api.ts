@@ -78,6 +78,7 @@ export interface Itinerary {
   travel_style?: string | null
   created_at: string
   updated_at: string
+  status?: 'draft' | 'active' | 'completed' | 'archived'
 
   // V2.0 新增字段
   summary?: string
@@ -99,6 +100,9 @@ export interface PreparationInfo {
   electricity?: string
   packing_list?: string[]
   budget_breakdown?: BudgetBreakdown
+  documents?: string[]
+  essentials?: string[]
+  booking_reminders?: string[]
 }
 
 export interface BudgetBreakdown {
@@ -111,10 +115,13 @@ export interface BudgetBreakdown {
 
 export interface TravelTips {
   transport?: string
+  transportation?: string
   accommodation?: string
   food?: string
   culture?: string
   safety?: string
+  shopping?: string
+  other?: string
 }
 
 export interface DayPlan {
@@ -126,11 +133,22 @@ export interface DayPlan {
   summary?: string
   activities?: Activity[]
   total_cost?: number
+  notes?: string[]
+  // V2.0 新增字段
+  accommodation?: {
+    name?: string
+    type?: string
+    rating?: number
+    price_range?: string
+    address?: string
+    booked?: boolean
+    booking_status?: string
+  }
 }
 
 export interface Activity {
   title: string
-  type: 'attraction' | 'meal' | 'transport' | 'accommodation'
+  type: 'attraction' | 'meal' | 'transport' | 'accommodation' | 'shopping'
   description: string
   time: string
   duration: string
@@ -141,6 +159,25 @@ export interface Activity {
     lat: number
   }
   tips?: string[]
+  // V2.0 新增字段
+  highlights?: string[]
+  ticket_price?: {
+    adult?: number
+    student?: number
+    child?: number
+    currency?: string
+  }
+  need_booking?: boolean
+  booking_info?: string
+  recommended_dishes?: string[]
+  transportation?: {
+    method?: string
+    duration?: string
+    cost?: number
+    tips?: string
+  }
+  address?: string
+  best_time?: string
 }
 
 // 文案生成相关类型
@@ -167,7 +204,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   session_id: number
-  created_at: string
+  message_type?: 'text' | 'image'
+  timestamp?: string
+  created_at?: string
 }
 
 export interface ChatRequest {
@@ -178,4 +217,38 @@ export interface ChatRequest {
 export interface ChatResponse {
   message: string
   session_id: number
+}
+
+export interface ChatSession {
+  id: number
+  user_id: number
+  title: string
+  features_json?: string
+  features?: {
+    knowledge_base?: boolean
+    voice_input?: boolean
+  }
+  created_at: string
+  updated_at?: string
+}
+
+export interface ItineraryCreateRequest {
+  title: string
+  destination: string
+  days: number
+  departure?: string | null
+  budget?: number
+  travel_style?: string
+  use_strict_json?: boolean
+}
+
+export interface CopywriterContentResponse {
+  id: number
+  content: string
+  platform: string
+  keywords: string[]
+  images: string[]
+  rating?: number | null
+  created_at: string
+  image_url?: string
 }
